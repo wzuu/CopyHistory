@@ -1,0 +1,15 @@
+# 核心依赖
+pywin32>=227
+pillow>=8.3.0
+pystray>=0.17.0
+cx_Freeze>=6.10.0
+
+# 标准库（通常随Python安装，无需额外安装）
+# tkinter (Python内置)
+# sqlite3 (Python内置)
+# hashlib (Python内置)
+# os (Python内置)
+# time (Python内置)
+# threading (Python内置)
+# datetime (Python内置)
+# sys (Python内置)
