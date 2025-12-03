@@ -2,6 +2,7 @@
 
 ![GitHub](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-brightgreen.svg)
 
 ## 📋 项目简介
 
@@ -54,7 +55,7 @@
 
 #### 方式二：源码运行
 
-```bash
+```
 # 克隆项目
 git clone https://github.com/your-username/clipboard-manager.git
 cd clipboard-manager
@@ -68,7 +69,7 @@ python run_clipboard_manager.py
 
 #### 方式三：自行打包
 
-```bash
+```
 # 安装打包工具
 pip install cx_Freeze
 
@@ -184,7 +185,7 @@ clipboard_files/
 
 使用cx_Freeze进行打包：
 
-```bash
+```
 python build_exe.py build
 ```
 

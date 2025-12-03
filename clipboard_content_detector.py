@@ -235,11 +235,8 @@ def monitor_clipboard(interval=1, auto_save=False):
             # 创建内容唯一标识
             content_key = ""
             if content_info['text']:
-                # 对于较长的文本，使用MD5作为标识
-                if len(content_info['text']) > 1000:  # 超过1000字符的文本使用MD5
-                    content_key = f"text_md5:{calculate_text_md5(content_info['text'])}"
-                else:
-                    content_key = f"text:{hash(content_info['text'])}"
+                # 对于所有文本，都使用MD5作为标识以确保一致性
+                content_key = f"text_md5:{calculate_text_md5(content_info['text'])}"
             elif content_info['files']:
                 content_key = f"files:{';'.join(sorted(content_info['files']))}"
             

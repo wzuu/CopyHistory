@@ -8,6 +8,12 @@ import os
 import sys
 from cx_Freeze import setup, Executable
 
+# 导入版本信息
+try:
+    from version import __version__
+except ImportError:
+    __version__ = "1.1.0"  # 默认版本号
+
 # 获取当前目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -74,7 +80,7 @@ detector_exe = Executable(
 # 设置信息
 setup(
     name="剪贴板管理器",
-    version="1.0",
+    version=__version__,
     description="剪贴板历史记录管理工具",
     options={"build_exe": build_exe_options},
     executables=[clipboard_manager_exe, view_history_exe, detector_exe],

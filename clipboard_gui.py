@@ -49,9 +49,16 @@ class ClipboardGUI:
         self.root.title("剪贴板历史记录")
         self.root.geometry("710x460")
         
-        # 居中显示窗口
-        self.center_window(710, 460)
+        # 设置窗口图标
+        try:
+            icon_path = resource_path("2.ico")
+            if os.path.exists(icon_path):
+                self.root.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"设置窗口图标失败: {e}")
         
+        # 居中显示窗口
+        self.center_window(710, 460)        
         # 创建UI
         self.setup_ui()
         # 在UI创建完成后加载第一页记录
@@ -1327,10 +1334,10 @@ class ClipboardGUI:
         # 合并记录并按时间排序
         all_records = []
         for record in text_records:
-            all_records.append(("text", record[1], record[2]))  # 类型, 内容, 时间
+            all_records.append(("text", record[1], record[2], record[0]))  # 类型, 内容, 时间, ID
         
         for record in file_records:
-            all_records.append(("file", record[3], record[7]))  # 类型, 文件名, 时间
+            all_records.append(("file", record[3], record[7], record[0]))  # 类型, 文件名, 时间, ID
         
         # 按时间排序(最新的在前面)
         all_records.sort(key=lambda x: x[2], reverse=True)
@@ -1389,7 +1396,11 @@ class ClipboardGUI:
         self.records_text.config(state=tk.NORMAL)  # 允许编辑以插入内容
         self.records_text.delete(1.0, tk.END)  # 清空现有内容
         
-        for i, (record_type, content, timestamp) in enumerate(all_records):
+        # 存储记录信息用于双击处理
+        self.float_panel_records = []
+        
+        for i, record in enumerate(all_records):
+            record_type, content, timestamp, record_id = record
             if record_type == "text":
                 # 文本记录
                 display_text = content
@@ -1404,7 +1415,24 @@ class ClipboardGUI:
                 display_text = display_text[:50] + "..."
             
             # 插入记录到Text控件,减小记录之间的间距
+            start_pos = self.records_text.index(tk.END)
             self.records_text.insert(tk.END, display_text)
+            end_pos = self.records_text.index(tk.END)
+            
+            # 存储记录信息
+            self.float_panel_records.append({
+                'type': record_type,
+                'id': record_id,
+                'content': content if record_type == "text" else content
+            })
+            
+            # 为记录添加标签以便单击和双击识别
+            self.records_text.tag_add(f"record_{i}", start_pos, f"{end_pos}-1c")
+            self.records_text.tag_bind(f"record_{i}", "<Button-1>", 
+                                     lambda e, index=i: self.copy_record_and_hide_panel_from_text(index))
+            self.records_text.tag_bind(f"record_{i}", "<Double-Button-1>", 
+                                     lambda e, index=i: self.copy_record_and_hide_panel_from_text(index))
+            self.records_text.tag_config(f"record_{i}", foreground="blue", underline=1)
             
             # 移除记录之间的额外换行符,使记录更紧密
             # 只在记录之间添加最小的分隔
@@ -1506,6 +1534,39 @@ class ClipboardGUI:
     def copy_record_and_hide_panel(self, index):
         """复制记录并隐藏面板"""
         self.copy_record_from_float_panel(index)
+        self.hide_float_panel()
+    
+    def copy_record_and_hide_panel_from_text(self, index):
+        """从Text控件复制记录并隐藏面板"""
+        if hasattr(self, 'float_panel_records') and index < len(self.float_panel_records):
+            record = self.float_panel_records[index]
+            record_type = record['type']
+            record_id = record['id']
+            
+            if record_type == "text":
+                # 从数据库获取完整文本内容
+                conn = sqlite3.connect(self.db.db_path)
+                cursor = conn.cursor()
+                cursor.execute('SELECT content FROM text_records WHERE id = ?', (record_id,))
+                result = cursor.fetchone()
+                conn.close()
+                
+                if result:
+                    full_text = result[0]
+                    self.root.clipboard_clear()
+                    self.root.clipboard_append(full_text)
+                    # 显示提示信息
+                    display_text = full_text[:20] + "..." if len(full_text) > 20 else full_text
+                    self.status_label.config(text=f"已复制：\"{display_text}\"")
+            else:
+                # 对于文件类型，复制文件名
+                filename = record['content']
+                self.root.clipboard_clear()
+                self.root.clipboard_append(filename)
+                # 显示提示信息
+                display_text = filename[:20] + "..." if len(filename) > 20 else filename
+                self.status_label.config(text=f"已复制文件名：\"{display_text}\"")
+        
         self.hide_float_panel()
     
     def show_window_and_hide_panel(self, event=None):

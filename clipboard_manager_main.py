@@ -567,7 +567,9 @@ class ClipboardManager:
                 try:
                     text_content = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
                     if text_content and text_content.strip():
-                        current_content_key = f"text:{hash(text_content)}"
+                        # 计算文本内容的MD5值作为唯一标识
+                        md5_hash = hashlib.md5(text_content.encode('utf-8')).hexdigest()
+                        current_content_key = f"text_md5:{md5_hash}"
                         if current_content_key != self.previous_content:
                             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             
