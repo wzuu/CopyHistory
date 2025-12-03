@@ -314,115 +314,130 @@ class ClipboardGUI:
             self.records_tree.heading(col, text=heading_text, command=lambda c=col: self.sort_by_column(c))
     
     def setup_settings_tab(self):
-        """设置标签页 - 简化版,无需滚动,充满宽度"""
-        # 创建设置界面容器,填充整个标签页
-        settings_container = ttk.Frame(self.settings_frame)
-        settings_container.pack(fill=tk.BOTH, expand=True)
+        """设置标签页 - 简洁行布局,支持滚动"""
+        # 创建画布和滚动条以支持滚动，去除边框
+        canvas = tk.Canvas(self.settings_frame, highlightthickness=0, bd=0)
+        scrollbar = tk.Scrollbar(self.settings_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, relief="flat", bd=0)
         
-        # 创建主设置框架,使用网格布局
-        settings_main_frame = ttk.Frame(settings_container)
-        settings_main_frame.pack(fill=tk.BOTH, expand=True)
+        # 配置滚动区域
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
         
-        # 配置网格权重,使内容可以扩展
-        settings_main_frame.columnconfigure(0, weight=1)
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # 绑定鼠标滚轮事件，使整个画布区域都支持滚动
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
+        
+        # 在窗口关闭时解绑事件
+        def _on_closing():
+            canvas.unbind_all("<MouseWheel>")
+        
+        # 打包画布和滚动条，增加内边距
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y", pady=10)
         
         # 复制限制设置
-        ttk.Label(settings_main_frame, text="复制限制设置", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
+        tk.Label(scrollable_frame, text="复制限制设置", font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(5, 10), padx=5)
         
         # 无限模式复选框
         self.unlimited_var = tk.BooleanVar()
-        unlimited_check = ttk.Checkbutton(settings_main_frame, text="无限模式(无限制)", variable=self.unlimited_var)
-        unlimited_check.grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
+        unlimited_check = tk.Checkbutton(scrollable_frame, text="无限模式(无限制)", variable=self.unlimited_var, bd=0, highlightthickness=0)
+        unlimited_check.pack(anchor=tk.W, pady=5, padx=10)
+        
+        # 最大大小和数量设置
+        tk.Label(scrollable_frame, text="最大复制大小和数量").pack(anchor=tk.W, pady=(10, 5), padx=5)
+        size_count_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
+        size_count_frame.pack(fill=tk.X, pady=5, padx=10)
         
         # 最大大小设置
-        size_frame = ttk.LabelFrame(settings_main_frame, text="最大复制大小")
-        size_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
-        size_frame.columnconfigure(1, weight=1)
-        
+        tk.Label(size_count_frame, text="大小:").pack(side=tk.LEFT, padx=(0, 5))
         self.size_var = tk.StringVar()
-        size_entry = ttk.Entry(size_frame, textvariable=self.size_var, width=10)
-        size_entry.grid(row=0, column=0, padx=(10, 5), pady=10, sticky=tk.W)
-        ttk.Label(size_frame, text="MB").grid(row=0, column=1, padx=(0, 10), pady=10, sticky=tk.W)
+        size_entry = tk.Entry(size_count_frame, textvariable=self.size_var, width=10, relief="solid", bd=1)
+        size_entry.pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(size_count_frame, text="MB").pack(side=tk.LEFT, padx=(0, 5))
+        
+        # 添加一些间距
+        tk.Frame(size_count_frame, width=20, relief="flat", bd=0).pack(side=tk.LEFT)
         
         # 最大数量设置
-        count_frame = ttk.LabelFrame(settings_main_frame, text="最大复制文件数量")
-        count_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
-        count_frame.columnconfigure(1, weight=1)
-        
+        tk.Label(size_count_frame, text="数量:").pack(side=tk.LEFT, padx=(0, 5))
         self.count_var = tk.StringVar()
-        count_entry = ttk.Entry(count_frame, textvariable=self.count_var, width=10)
-        count_entry.grid(row=0, column=0, padx=(10, 5), pady=10, sticky=tk.W)
-        ttk.Label(count_frame, text="个").grid(row=0, column=1, padx=(0, 10), pady=10, sticky=tk.W)
+        count_entry = tk.Entry(size_count_frame, textvariable=self.count_var, width=10, relief="solid", bd=1)
+        count_entry.pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(size_count_frame, text="个").pack(side=tk.LEFT, padx=(0, 5))
         
         # 保存天数设置
-        ttk.Label(settings_main_frame, text="记录保存设置", font=("Arial", 12, "bold")).grid(row=4, column=0, sticky=tk.W, pady=(10, 5))
-        
-        retention_frame = ttk.LabelFrame(settings_main_frame, text="保存天数")
-        retention_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
-        retention_frame.columnconfigure(1, weight=1)
+        tk.Label(scrollable_frame, text="记录保存设置", font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(15, 10), padx=5)
         
         # 永久保存选项
         self.retention_var = tk.StringVar()
-        permanent_radio = ttk.Radiobutton(retention_frame, text="永久保存", variable=self.retention_var, value="permanent")
-        permanent_radio.grid(row=0, column=0, sticky=tk.W, padx=10, pady=5)
+        permanent_radio = tk.Radiobutton(scrollable_frame, text="永久保存", variable=self.retention_var, value="permanent", bd=0, highlightthickness=0)
+        permanent_radio.pack(anchor=tk.W, pady=5, padx=10)
         
         # 自定义天数选项
-        custom_frame = ttk.Frame(retention_frame)
-        custom_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=10, pady=5)
-        custom_frame.columnconfigure(1, weight=1)
+        custom_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
+        custom_frame.pack(fill=tk.X, pady=5, padx=10)
         
-        custom_radio = ttk.Radiobutton(custom_frame, text="自定义天数:", variable=self.retention_var, value="custom")
-        custom_radio.grid(row=0, column=0, sticky=tk.W)
+        custom_radio = tk.Radiobutton(custom_frame, text="自定义天数:", variable=self.retention_var, value="custom", bd=0, highlightthickness=0)
+        custom_radio.pack(side=tk.LEFT)
         
         self.days_var = tk.StringVar()
-        self.days_entry = ttk.Entry(custom_frame, textvariable=self.days_var, width=10)
-        self.days_entry.grid(row=0, column=1, padx=(5, 0), sticky=tk.W)
-        ttk.Label(custom_frame, text="天").grid(row=0, column=2, padx=(5, 0), sticky=tk.W)
+        self.days_entry = tk.Entry(custom_frame, textvariable=self.days_var, width=10, relief="solid", bd=1)
+        self.days_entry.pack(side=tk.LEFT, padx=(10, 5))
+        tk.Label(custom_frame, text="天").pack(side=tk.LEFT, padx=(5, 0))
+        
+        # 系统设置
+        tk.Label(scrollable_frame, text="系统设置", font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(15, 10), padx=5)
         
         # 开机自启设置
-        ttk.Label(settings_main_frame, text="系统设置", font=("Arial", 12, "bold")).grid(row=6, column=0, sticky=tk.W, pady=(10, 5))
-        
-        autostart_frame = ttk.LabelFrame(settings_main_frame, text="开机自启")
-        autostart_frame.grid(row=7, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
-        
         self.autostart_var = tk.BooleanVar()
-        autostart_check = ttk.Checkbutton(autostart_frame, text="允许程序开机自启", variable=self.autostart_var)
-        autostart_check.grid(row=0, column=0, sticky=tk.W, padx=10, pady=10)
+        autostart_check = tk.Checkbutton(scrollable_frame, text="允许程序开机自启", variable=self.autostart_var, bd=0, highlightthickness=0)
+        autostart_check.pack(anchor=tk.W, pady=5, padx=10)
         
         # 悬浮图标设置
-        ttk.Label(settings_main_frame, text="悬浮图标设置", font=("Arial", 12, "bold")).grid(row=8, column=0, sticky=tk.W, pady=(10, 5))
-        
-        float_icon_frame = ttk.LabelFrame(settings_main_frame, text="悬浮图标")
-        float_icon_frame.grid(row=9, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
-        
         self.float_icon_var = tk.BooleanVar()
-        float_icon_check = ttk.Checkbutton(float_icon_frame, text="启用悬浮图标", variable=self.float_icon_var)
-        float_icon_check.grid(row=0, column=0, sticky=tk.W, padx=10, pady=10)
+        float_icon_check = tk.Checkbutton(scrollable_frame, text="启用悬浮图标", variable=self.float_icon_var, bd=0, highlightthickness=0)
+        float_icon_check.pack(anchor=tk.W, pady=5, padx=10)
         
-        # 添加说明标签
-        ttk.Label(float_icon_frame, text="悬浮图标大小: 50×50, 透明度: 15%, 可自由拖动, 点击显示页面", font=("Arial", 9)).grid(row=1, column=0, padx=10, pady=(0, 10), sticky=tk.W)
+        # 悬浮图标说明
+        tk.Label(scrollable_frame, text="悬浮图标大小: 50×50, 透明度: 15%, 可自由拖动, 点击显示页面", 
+                 font=("Arial", 9)).pack(anchor=tk.W, pady=(0, 10), padx=10)
         
-        # 重置所有记录按钮
-        ttk.Label(settings_main_frame, text="数据管理", font=("Arial", 12, "bold")).grid(row=10, column=0, sticky=tk.W, pady=(10, 5))
+        # 数据管理
+        tk.Label(scrollable_frame, text="数据管理", font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(15, 10), padx=5)
         
-        reset_frame = ttk.LabelFrame(settings_main_frame, text="重置所有记录")
-        reset_frame.grid(row=11, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
+        # 重置所有记录
+        reset_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
+        reset_frame.pack(fill=tk.X, pady=5, padx=10)
         
-        ttk.Label(reset_frame, text="此操作将删除所有记录和本地缓存文件!").grid(row=0, column=0, pady=10)
-        ttk.Button(reset_frame, text="重置所有记录", command=self.reset_all_records).grid(row=1, column=0, pady=(0, 10))
+        tk.Label(reset_frame, text="此操作将删除所有记录和本地缓存文件!").pack(side=tk.LEFT, pady=5)
+        tk.Button(reset_frame, text="重置所有记录", command=self.reset_all_records).pack(side=tk.RIGHT, pady=5)
         
         # 按钮框架
-        button_frame = ttk.Frame(settings_main_frame)
-        button_frame.grid(row=12, column=0, pady=(20, 0))
+        button_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
+        button_frame.pack(pady=20, padx=10)
         
-        ttk.Button(button_frame, text="保存设置", command=self.save_settings).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(button_frame, text="恢复默认", command=self.reset_to_default_settings).pack(side=tk.LEFT, padx=(0, 10))
+        tk.Button(button_frame, text="保存设置", command=self.save_settings).pack(side=tk.LEFT, padx=(0, 10))
+        tk.Button(button_frame, text="恢复默认", command=self.reset_to_default_settings).pack(side=tk.LEFT)
         
         # 初始化设置显示
         self.load_settings_display()
         
         # 绑定无限模式复选框事件
         self.unlimited_var.trace("w", lambda *args: self.toggle_entries())
+        
+        # 绑定窗口关闭事件
+        self.root.protocol("WM_DELETE_WINDOW", _on_closing)
     
     def load_settings_display(self):
         """加载设置显示"""
