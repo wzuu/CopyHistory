@@ -63,6 +63,9 @@ class ClipboardGUI:
         # 检查并创建悬浮图标
         self.check_float_icon()
         
+        # 更新悬浮图标透明度
+        self.update_float_icon_opacity()
+        
         # 开始定期更新
         self.start_auto_update()
         
@@ -399,6 +402,16 @@ class ClipboardGUI:
         # 系统设置
         tk.Label(scrollable_frame, text="系统设置", font=("Arial", 12, "bold")).pack(anchor=tk.W, pady=(15, 10), padx=5)
         
+        # 剪贴板类型保存机制
+        tk.Label(scrollable_frame, text="剪贴板记录类型").pack(anchor=tk.W, pady=(10, 5), padx=5)
+        
+        self.clipboard_type_var = tk.StringVar(value="all")
+        all_types_radio = tk.Radiobutton(scrollable_frame, text="记录所有类型（文本和文件）", variable=self.clipboard_type_var, value="all", bd=0, highlightthickness=0)
+        all_types_radio.pack(anchor=tk.W, pady=2, padx=10)
+        
+        text_only_radio = tk.Radiobutton(scrollable_frame, text="仅记录纯文本", variable=self.clipboard_type_var, value="text_only", bd=0, highlightthickness=0)
+        text_only_radio.pack(anchor=tk.W, pady=2, padx=10)
+        
         # 开机自启设置
         self.autostart_var = tk.BooleanVar()
         autostart_check = tk.Checkbutton(scrollable_frame, text="允许程序开机自启", variable=self.autostart_var, bd=0, highlightthickness=0)
@@ -409,8 +422,19 @@ class ClipboardGUI:
         float_icon_check = tk.Checkbutton(scrollable_frame, text="启用悬浮图标", variable=self.float_icon_var, bd=0, highlightthickness=0)
         float_icon_check.pack(anchor=tk.W, pady=5, padx=10)
         
+        # 悬浮图标透明度设置
+        tk.Label(scrollable_frame, text="悬浮图标透明度").pack(anchor=tk.W, pady=(10, 5), padx=5)
+        opacity_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
+        opacity_frame.pack(fill=tk.X, pady=5, padx=10)
+        
+        tk.Label(opacity_frame, text="透明度:").pack(side=tk.LEFT, padx=(0, 5))
+        self.opacity_var = tk.StringVar()
+        opacity_entry = tk.Entry(opacity_frame, textvariable=self.opacity_var, width=10, relief="solid", bd=1)
+        opacity_entry.pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(opacity_frame, text="%").pack(side=tk.LEFT, padx=(0, 5))
+        
         # 悬浮图标说明
-        tk.Label(scrollable_frame, text="悬浮图标大小: 50×50, 透明度: 15%, 可自由拖动, 点击显示页面", 
+        tk.Label(scrollable_frame, text="悬浮图标大小: 50×50, 可自由拖动, 点击显示页面", 
                  font=("Arial", 9)).pack(anchor=tk.W, pady=(0, 10), padx=10)
         
         # 数据管理
@@ -459,6 +483,18 @@ class ClipboardGUI:
             self.float_icon_var.set(settings['float_icon'])
         else:
             self.float_icon_var.set(True)
+            
+        # 检查是否有透明度设置,如果没有则添加默认值
+        if 'opacity' in settings:
+            self.opacity_var.set(str(settings['opacity']))
+        else:
+            self.opacity_var.set("15")  # 默认15%
+            
+        # 检查是否有剪贴板类型设置,如果没有则添加默认值
+        if 'clipboard_type' in settings:
+            self.clipboard_type_var.set(settings['clipboard_type'])
+        else:
+            self.clipboard_type_var.set("all")  # 默认记录所有类型
         
         # 应用初始状态
         self.toggle_entries()
@@ -513,11 +549,24 @@ class ClipboardGUI:
             # 保存悬浮图标设置
             float_icon = self.float_icon_var.get()
             
+            # 保存悬浮图标透明度设置
+            try:
+                opacity = int(self.opacity_var.get())
+                # 限制透明度范围在5-100之间
+                opacity = max(5, min(100, opacity))
+            except ValueError:
+                opacity = 15  # 默认值
+                
+            # 保存剪贴板类型设置
+            clipboard_type = self.clipboard_type_var.get()
+            
             # 更新所有设置
             self.db.update_settings(
                 retention_days=retention_days,
                 auto_start=auto_start,
-                float_icon=float_icon
+                float_icon=float_icon,
+                opacity=opacity,
+                clipboard_type=clipboard_type
             )
             
             # 如果设置了自定义天数,检查并删除过期记录
@@ -529,6 +578,9 @@ class ClipboardGUI:
             
             # 处理悬浮图标
             self.handle_float_icon(float_icon)
+            
+            # 更新悬浮图标透明度
+            self.update_float_icon_opacity()
             
             messagebox.showinfo("提示", "设置已保存")
         except ValueError:
@@ -542,7 +594,10 @@ class ClipboardGUI:
             max_copy_count=100,
             unlimited_mode=False,
             retention_days=0,  # 永久保存
-            auto_start=False
+            auto_start=False,
+            float_icon=False,
+            opacity=15,  # 默认透明度15%
+            clipboard_type='all'  # 默认记录所有类型
         )
         
         # 更新界面显示
@@ -552,6 +607,12 @@ class ClipboardGUI:
         self.retention_var.set("permanent")
         self.days_entry.config(state="disabled")
         self.autostart_var.set(False)
+        self.float_icon_var.set(False)
+        self.opacity_var.set("15")
+        self.clipboard_type_var.set("all")
+        
+        # 更新悬浮图标透明度
+        self.update_float_icon_opacity()
         
         messagebox.showinfo("提示", "已恢复默认设置")
     
@@ -1155,10 +1216,27 @@ class ClipboardGUI:
             # 禁用悬浮图标
             self.destroy_float_icon()
     
+    def update_float_icon_opacity(self):
+        """更新悬浮图标透明度"""
+        if self.float_window:
+            # 获取设置中的透明度值
+            settings = self.db.get_settings()
+            opacity = settings.get('opacity', 15)  # 默认15%
+            # 将百分比转换为0-1之间的值
+            alpha = opacity / 100.0
+            # 更新透明度
+            self.float_window.attributes("-alpha", alpha)
+    
     def create_float_icon(self):
         """创建悬浮图标"""
         # 如果悬浮图标已经存在,先销毁
         self.destroy_float_icon()
+        
+        # 获取设置中的透明度值
+        settings = self.db.get_settings()
+        opacity = settings.get('opacity', 15)  # 默认15%
+        # 将百分比转换为0-1之间的值
+        alpha = opacity / 100.0
         
         # 创建悬浮窗口
         self.float_window = tk.Toplevel(self.root)
@@ -1166,7 +1244,7 @@ class ClipboardGUI:
         self.float_window.geometry("50x50")  # 改为80x80大小,符合需求说明
         self.float_window.overrideredirect(True)  # 去除窗口边框
         self.float_window.attributes("-topmost", True)  # 置顶显示
-        self.float_window.attributes("-alpha", 0.15)  # 设置透明度为30%,符合需求说明
+        self.float_window.attributes("-alpha", alpha)  # 设置透明度
         
         # 获取屏幕尺寸
         screen_width = self.root.winfo_screenwidth()
@@ -1670,11 +1748,15 @@ class ClipboardGUI:
     
     def update_records(self):
         """更新记录显示"""
-        # 只在窗口显示时更新,避免不必要的资源消耗
-        # 并且只有在没有用户操作进行时才更新
+        # 只在没有用户操作进行时才更新
         # 当窗口有焦点时不更新,避免干扰用户操作
-        if not self.is_hidden and not self.user_action_in_progress and not self.has_focus:
-            self.load_records()
+        if not self.user_action_in_progress and not self.has_focus:
+            # 如果窗口显示,更新所有记录
+            if not self.is_hidden:
+                self.load_records()
+            else:
+                # 如果窗口隐藏,只更新统计数据
+                self.update_statistics_display()
         
         # 继续定期更新
         self.update_job = self.root.after(2000, self.update_records)

@@ -87,9 +87,7 @@ class ClipboardDatabase:
             import sqlite3
             conn = sqlite3.connect(db_path)
             conn.close()
-            # 如果文件已存在，删除测试文件
-            if os.path.exists(db_path):
-                os.remove(db_path)
+            # 不要删除已存在的数据库文件
             return True
         except Exception as e:
             print(f"测试数据库路径 {db_path} 失败: {e}")
@@ -191,6 +189,20 @@ class ClipboardDatabase:
         # 检查并添加 float_icon 字段（如果不存在）
         try:
             cursor.execute("ALTER TABLE settings ADD COLUMN float_icon INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            # 字段已存在，忽略错误
+            pass
+        
+        # 检查并添加 opacity 字段（如果不存在）
+        try:
+            cursor.execute("ALTER TABLE settings ADD COLUMN opacity INTEGER DEFAULT 15")
+        except sqlite3.OperationalError:
+            # 字段已存在，忽略错误
+            pass
+        
+        # 检查并添加 clipboard_type 字段（如果不存在）
+        try:
+            cursor.execute("ALTER TABLE settings ADD COLUMN clipboard_type TEXT DEFAULT 'all'")
         except sqlite3.OperationalError:
             # 字段已存在，忽略错误
             pass
@@ -445,7 +457,7 @@ class ClipboardDatabase:
         """获取设置"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute('SELECT max_copy_size, max_copy_count, unlimited_mode, retention_days, auto_start, float_icon FROM settings WHERE id = 1')
+        cursor.execute('SELECT max_copy_size, max_copy_count, unlimited_mode, retention_days, auto_start, float_icon, opacity, clipboard_type FROM settings WHERE id = 1')
         result = cursor.fetchone()
         conn.close()
         
@@ -456,7 +468,9 @@ class ClipboardDatabase:
                 'unlimited_mode': bool(result[2]),
                 'retention_days': result[3],
                 'auto_start': bool(result[4]),
-                'float_icon': bool(result[5])
+                'float_icon': bool(result[5]),
+                'opacity': result[6],
+                'clipboard_type': result[7]
             }
         else:
             # 返回默认设置
@@ -466,10 +480,12 @@ class ClipboardDatabase:
                 'unlimited_mode': False,
                 'retention_days': 0,  # 永久保存
                 'auto_start': False,
-                'float_icon': False
+                'float_icon': False,
+                'opacity': 15,  # 默认透明度15%
+                'clipboard_type': 'all'  # 默认记录所有类型
             }
     
-    def update_settings(self, max_copy_size=None, max_copy_count=None, unlimited_mode=None, retention_days=None, auto_start=None, float_icon=None):
+    def update_settings(self, max_copy_size=None, max_copy_count=None, unlimited_mode=None, retention_days=None, auto_start=None, float_icon=None, opacity=None, clipboard_type=None):
         """更新设置"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -491,6 +507,12 @@ class ClipboardDatabase:
             
         if float_icon is not None:
             cursor.execute('UPDATE settings SET float_icon = ? WHERE id = 1', (int(float_icon),))
+            
+        if opacity is not None:
+            cursor.execute('UPDATE settings SET opacity = ? WHERE id = 1', (opacity,))
+            
+        if clipboard_type is not None:
+            cursor.execute('UPDATE settings SET clipboard_type = ? WHERE id = 1', (clipboard_type,))
         
         conn.commit()
         conn.close()

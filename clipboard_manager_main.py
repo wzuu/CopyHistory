@@ -485,70 +485,85 @@ class ClipboardManager:
         try:
             win32clipboard.OpenClipboard()
             
-            # 检查是否有文件列表
-            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_HDROP):
-                try:
-                    files = win32clipboard.GetClipboardData(win32con.CF_HDROP)
-                    if files:
-                        # 检查复制限制
-                        allowed, message = self.check_copy_limits(files)
-                        if not allowed:
-                            print(f"🚫 复制限制: {message}")
-                            return
-                        
-                        # 处理文件
-                        current_content_key = f"files:{';'.join(sorted(files))}"
-                        if current_content_key != self.previous_content:
-                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            
-                            for file_path in files:
-                                if os.path.exists(file_path):
-                                    try:
-                                        # 计算文件MD5
-                                        md5_hash = calculate_file_md5(file_path)
-                                        if not md5_hash:
-                                            continue
-                                        
-                                        # 获取文件信息
-                                        filename = os.path.basename(file_path)
-                                        file_size = os.path.getsize(file_path)
-                                        file_type = get_file_type_category(filename)
-                                        
-                                        # 构建保存路径
-                                        date_folder = datetime.now().strftime("%Y-%m-%d")
-                                        type_folder = file_type
-                                        save_folder = os.path.join(self.base_save_folder, type_folder, date_folder)
-                                        os.makedirs(save_folder, exist_ok=True)
-                                        
-                                        # 生成唯一文件名
-                                        name, ext = os.path.splitext(filename)
-                                        saved_filename = f"{name}_{md5_hash[:8]}{ext}"
-                                        saved_path = os.path.join(save_folder, saved_filename)
-                                        
-                                        # 如果文件不存在则复制
-                                        if not os.path.exists(saved_path):
-                                            import shutil
-                                            shutil.copy2(file_path, saved_path)
-                                        
-                                        # 保存到数据库
-                                        record_id = self.db.save_file_record(
-                                            file_path, saved_path, filename, file_size, file_type, md5_hash
-                                        )
-                                        
-                                        if record_id:
-                                            print(f"[{timestamp}] 保存文件记录 (ID: {record_id}): {filename}")
-                                            if saved_path != file_path:
-                                                print(f"    文件已保存到: {saved_path}")
-                                    except Exception as e:
-                                        print(f"[{timestamp}] 处理文件 {file_path} 时出错: {e}")
-                            
-                            self.previous_content = current_content_key
-                
-                except Exception as e:
-                    print(f"读取剪贴板文件列表时出错: {e}")
+            # 获取设置
+            settings = self.db.get_settings()
+            clipboard_type = settings.get('clipboard_type', 'all')  # 默认记录所有类型
             
+            # 检查是否有文件列表
+            has_file_list = win32clipboard.IsClipboardFormatAvailable(win32con.CF_HDROP)
             # 检查是否有文本内容
-            elif win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
+            has_text_content = win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT)
+            
+            # 处理文件列表
+            if has_file_list:
+                # 如果设置为仅记录文本，则跳过文件处理（除非没有文本内容）
+                if clipboard_type == 'text_only' and has_text_content:
+                    # 有文本内容，跳过文件处理
+                    pass
+                else:
+                    try:
+                        files = win32clipboard.GetClipboardData(win32con.CF_HDROP)
+                        if files:
+                            # 检查复制限制
+                            allowed, message = self.check_copy_limits(files)
+                            if not allowed:
+                                print(f"🚫 复制限制: {message}")
+                                win32clipboard.CloseClipboard()
+                                return
+                            
+                            # 处理文件
+                            current_content_key = f"files:{';'.join(sorted(files))}"
+                            if current_content_key != self.previous_content:
+                                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                
+                                for file_path in files:
+                                    if os.path.exists(file_path):
+                                        try:
+                                            # 计算文件MD5
+                                            md5_hash = calculate_file_md5(file_path)
+                                            if not md5_hash:
+                                                continue
+                                            
+                                            # 获取文件信息
+                                            filename = os.path.basename(file_path)
+                                            file_size = os.path.getsize(file_path)
+                                            file_type = get_file_type_category(filename)
+                                            
+                                            # 构建保存路径
+                                            date_folder = datetime.now().strftime("%Y-%m-%d")
+                                            type_folder = file_type
+                                            save_folder = os.path.join(self.base_save_folder, type_folder, date_folder)
+                                            os.makedirs(save_folder, exist_ok=True)
+                                            
+                                            # 生成唯一文件名
+                                            name, ext = os.path.splitext(filename)
+                                            saved_filename = f"{name}_{md5_hash[:8]}{ext}"
+                                            saved_path = os.path.join(save_folder, saved_filename)
+                                            
+                                            # 如果文件不存在则复制
+                                            if not os.path.exists(saved_path):
+                                                import shutil
+                                                shutil.copy2(file_path, saved_path)
+                                            
+                                            # 保存到数据库
+                                            record_id = self.db.save_file_record(
+                                                file_path, saved_path, filename, file_size, file_type, md5_hash
+                                            )
+                                            
+                                            if record_id:
+                                                print(f"[{timestamp}] 保存文件记录 (ID: {record_id}): {filename}")
+                                                if saved_path != file_path:
+                                                    print(f"    文件已保存到: {saved_path}")
+                                        except Exception as e:
+                                            print(f"[{timestamp}] 处理文件 {file_path} 时出错: {e}")
+                                
+                                self.previous_content = current_content_key
+                    
+                    except Exception as e:
+                        print(f"读取剪贴板文件列表时出错: {e}")
+            
+            # 处理文本内容
+            if has_text_content:
                 try:
                     text_content = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
                     if text_content and text_content.strip():
@@ -561,6 +576,7 @@ class ClipboardManager:
                             settings = self.db.get_settings()
                             if not settings['unlimited_mode'] and text_size > settings['max_copy_size']:
                                 print(f"🚫 文本大小({text_size}字节)超过了限制({settings['max_copy_size']}字节)")
+                                win32clipboard.CloseClipboard()
                                 return
                             
                             # 保存到数据库
