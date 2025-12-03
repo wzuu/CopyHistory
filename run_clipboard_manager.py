@@ -12,6 +12,7 @@ from clipboard_gui import ClipboardGUI
 import win32gui
 import win32con
 import win32api
+import win32event
 import sys
 
 def is_already_running():
@@ -19,9 +20,9 @@ def is_already_running():
     mutex_name = "ClipboardManager_Mutex"
     try:
         # 创建一个互斥锁
-        mutex = win32api.CreateMutex(None, False, mutex_name)
+        mutex = win32event.CreateMutex(None, False, mutex_name)
         # 检查是否已经存在同名互斥锁
-        if win32api.GetLastError() == win32con.ERROR_ALREADY_EXISTS:
+        if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
             win32api.CloseHandle(mutex)
             return True
         return False

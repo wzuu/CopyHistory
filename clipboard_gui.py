@@ -27,7 +27,7 @@ except ImportError:
 def resource_path(relative_path):
     """获取资源文件的绝对路径"""
     try:
-        # PyInstaller创建临时文件夹，将路径存储在_MEIPASS中
+        # PyInstaller创建临时文件夹,将路径存储在_MEIPASS中
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
@@ -47,10 +47,10 @@ class ClipboardGUI:
         
         # 设置窗口属性
         self.root.title("剪贴板历史记录")
-        self.root.geometry("640x950")
+        self.root.geometry("710x460")
         
         # 居中显示窗口
-        self.center_window(640, 950)
+        self.center_window(710, 460)
         
         # 创建UI
         self.setup_ui()
@@ -73,7 +73,7 @@ class ClipboardGUI:
         self.root.bind("<FocusIn>", self.on_focus_in)
         self.root.bind("<FocusOut>", self.on_focus_out)
         
-        # 如果支持系统托盘，创建托盘图标
+        # 如果支持系统托盘,创建托盘图标
         if TRAY_ICON_AVAILABLE:
             self.create_tray_icon()
     
@@ -122,7 +122,7 @@ class ClipboardGUI:
         window.geometry(f'{width}x{height}+{x}+{y}')
     
     def sanitize_text_for_display(self, text, max_length=100):
-        """清理文本内容，移除换行符并截断过长内容"""
+        """清理文本内容,移除换行符并截断过长内容"""
         # 将换行符替换为空格
         sanitized = text.replace('\n', ' ').replace('\r', ' ')
         # 截断过长内容
@@ -149,7 +149,7 @@ class ClipboardGUI:
             if os.path.exists(icon_path):
                 image = Image.open(icon_path)
             else:
-                # 如果图标文件不存在，创建一个简单的图标
+                # 如果图标文件不存在,创建一个简单的图标
                 image = Image.new('RGB', (64, 64), color=(73, 109, 137))
                 draw = ImageDraw.Draw(image)
                 draw.ellipse((10, 10, 54, 54), fill=(255, 255, 255))
@@ -172,48 +172,32 @@ class ClipboardGUI:
     def setup_ui(self):
         """设置UI界面"""
         # 创建主框架
-        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame = ttk.Frame(self.root)
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # 搜索框架
-        search_frame = ttk.LabelFrame(main_frame, text="搜索", padding="10")
-        search_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-        
-        ttk.Label(search_frame, text="关键词:").grid(row=0, column=0, padx=(0, 5))
-        self.search_entry = ttk.Entry(search_frame, width=30)
-        self.search_entry.grid(row=0, column=1, padx=(0, 10))
-        
-        ttk.Button(search_frame, text="搜索", command=self.search_records).grid(row=0, column=2, padx=(0, 10))
-        ttk.Button(search_frame, text="刷新", command=self.load_records).grid(row=0, column=3)
-        
-        # 创建笔记本控件（标签页）
-        notebook = ttk.Notebook(main_frame)
-        notebook.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # 创建笔记本控件(标签页)
+        self.notebook = ttk.Notebook(main_frame)
+        self.notebook.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # 记录标签页
-        self.records_frame = ttk.Frame(notebook)
-        notebook.add(self.records_frame, text="记录")
+        self.records_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.records_frame, text="记录(L)")
         self.setup_records_tab()
         
-        # 统计标签页
-        self.stats_frame = ttk.Frame(notebook)
-        notebook.add(self.stats_frame, text="统计")
-        self.setup_stats_tab()
-        
         # 设置标签页
-        self.settings_frame = ttk.Frame(notebook)
-        notebook.add(self.settings_frame, text="设置")
+        self.settings_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.settings_frame, text="设置(S)")
         self.setup_settings_tab()
         
         # 配置网格权重
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame.rowconfigure(0, weight=1)
         self.records_frame.columnconfigure(0, weight=1)
-        self.records_frame.rowconfigure(0, weight=1)
-        self.stats_frame.columnconfigure(0, weight=1)
-        self.stats_frame.rowconfigure(0, weight=1)
+        self.records_frame.rowconfigure(0, weight=0)  # 搜索框行不扩展
+        self.records_frame.rowconfigure(1, weight=1)  # 记录列表行扩展
+        self.records_frame.rowconfigure(2, weight=0)  # 状态标签行不扩展
         self.settings_frame.columnconfigure(0, weight=1)
         self.settings_frame.rowconfigure(0, weight=1)
         
@@ -221,20 +205,47 @@ class ClipboardGUI:
         self.root.bind('<Alt-c>', self.toggle_window)
         self.root.bind('<Alt-C>', self.toggle_window)
         
+        # 绑定快捷键 Ctrl+L 和 Ctrl+S 切换标签页
+        self.root.bind('<Control-l>', self.switch_to_records_tab)
+        self.root.bind('<Control-L>', self.switch_to_records_tab)
+        self.root.bind('<Control-s>', self.switch_to_settings_tab)
+        self.root.bind('<Control-S>', self.switch_to_settings_tab)
+        
         # 设置焦点以确保快捷键生效
         self.root.focus_set()
 
+    def switch_to_records_tab(self, event=None):
+        """切换到记录标签页"""
+        self.notebook.select(self.records_frame)
+    
+    def switch_to_settings_tab(self, event=None):
+        """切换到设置标签页"""
+        self.notebook.select(self.settings_frame)
+    
     def setup_records_tab(self):
         """设置记录标签页"""
         # 移除分页参数
         
         # 初始化排序参数
         self.sort_column = "时间"  # 默认排序列
-        self.sort_reverse = True   # 默认倒序（最新的在前面）
+        self.sort_reverse = True   # 默认倒序(最新的在前面)
         
-        # 创建树形视图，显示记录名称或内容、类型、大小、时间、次数
+        # 配置记录标签页的网格权重
+        self.records_frame.columnconfigure(0, weight=1)
+        self.records_frame.rowconfigure(0, weight=0)  # 搜索框行不扩展
+        self.records_frame.rowconfigure(1, weight=1)  # 记录列表行扩展
+        self.records_frame.rowconfigure(2, weight=0)  # 状态标签行不扩展
+        
+        # 创建搜索输入框，与记录列表宽度一致
+        self.search_entry = ttk.Entry(self.records_frame)
+        self.search_entry.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=2, padx=(5, 0))
+        
+        # 绑定实时搜索事件
+        self.search_entry.bind('<KeyRelease>', self.on_search_input)
+        
+        # 创建树形视图,显示记录名称或内容、类型、大小、时间、次数
         columns = ("名称或内容", "类型", "大小", "时间", "次数")
-        self.records_tree = ttk.Treeview(self.records_frame, columns=columns, show="headings", height=20)
+        self.records_tree = ttk.Treeview(self.records_frame, columns=columns, show="headings", height=15)
         
         # 设置列标题和点击事件
         for col in columns:
@@ -251,40 +262,36 @@ class ClipboardGUI:
         self.records_tree.column("时间", width=130, anchor="center")  # 居中对齐
         self.records_tree.column("次数", width=50, anchor="center")  # 居中对齐
         
-        # 添加垂直滚动条，取消横向滚动条
+        # 添加垂直滚动条,取消横向滚动条
         records_scrollbar_y = ttk.Scrollbar(self.records_frame, orient=tk.VERTICAL, command=self.records_tree.yview)
         self.records_tree.configure(yscrollcommand=records_scrollbar_y.set)
         
         # 布局
-        self.records_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        records_scrollbar_y.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.records_tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=2)
+        records_scrollbar_y.grid(row=1, column=1, sticky=(tk.N, tk.S), padx=(0, 5), pady=2)
         
-        # 添加按钮框架
-        records_button_frame = ttk.Frame(self.records_frame)
-        records_button_frame.grid(row=2, column=0, columnspan=2, pady=(10, 0), sticky=(tk.W, tk.E))
+        # 添加提示信息标签
+        self.status_label = ttk.Label(self.records_frame, text="0条记录，累计大小0B")
+        self.status_label.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=(2, 5))
         
-        ttk.Button(records_button_frame, text="复制选中内容", command=self.copy_selected_record).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(records_button_frame, text="删除选中记录", command=self.delete_selected_record).pack(side=tk.LEFT)
+        # 添加双击事件复制内容到剪贴板
+        self.records_tree.bind("<Double-1>", self.copy_record_on_double_click)
         
-        # 添加双击事件显示完整内容
-        self.records_tree.bind("<Double-1>", self.show_full_record)
+        # 添加Delete键事件删除选中记录
+        self.records_tree.bind("<Delete>", self.delete_selected_record_on_key)
         
         # 绑定滚动事件以实现自动加载更多
         self.records_tree.bind("<<TreeviewSelect>>", self.on_tree_select)
         self.records_tree.bind("<MouseWheel>", self.on_mouse_wheel)
-        
-        # 配置网格权重
-        self.records_frame.columnconfigure(0, weight=1)
-        self.records_frame.rowconfigure(0, weight=1)
     
     def sort_by_column(self, col):
         """根据点击的列进行排序"""
-        # 如果点击的是同一列，则切换排序方向；否则默认倒序（与原始行为一致）
+        # 如果点击的是同一列,则切换排序方向;否则默认倒序(与原始行为一致)
         if self.sort_column == col:
             self.sort_reverse = not self.sort_reverse
         else:
             self.sort_column = col
-            self.sort_reverse = True  # 默认倒序，与原始行为一致
+            self.sort_reverse = True  # 默认倒序,与原始行为一致
         
         # 更新列标题显示排序方向
         self.update_sort_indicators()
@@ -306,36 +313,17 @@ class ClipboardGUI:
                     heading_text += " ↑"  # 正序
             self.records_tree.heading(col, text=heading_text, command=lambda c=col: self.sort_by_column(c))
     
-    def setup_stats_tab(self):
-        """设置统计标签页"""
-        # 创建统计信息显示区域
-        stats_text = tk.Text(self.stats_frame, wrap=tk.WORD)
-        stats_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # 添加滚动条
-        stats_scrollbar = ttk.Scrollbar(self.stats_frame, orient=tk.VERTICAL, command=stats_text.yview)
-        stats_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        stats_text.configure(yscrollcommand=stats_scrollbar.set)
-        
-        # 保存文本控件引用以便更新
-        self.stats_text = stats_text
-        
-        # 添加刷新按钮
-        refresh_button_frame = ttk.Frame(self.stats_frame)
-        refresh_button_frame.pack(pady=(0, 10))
-        ttk.Button(refresh_button_frame, text="刷新统计", command=self.update_statistics_display).pack()
-    
     def setup_settings_tab(self):
-        """设置标签页 - 简化版，无需滚动，充满宽度"""
-        # 创建设置界面容器，填充整个标签页
+        """设置标签页 - 简化版,无需滚动,充满宽度"""
+        # 创建设置界面容器,填充整个标签页
         settings_container = ttk.Frame(self.settings_frame)
-        settings_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        settings_container.pack(fill=tk.BOTH, expand=True)
         
-        # 创建主设置框架，使用网格布局
+        # 创建主设置框架,使用网格布局
         settings_main_frame = ttk.Frame(settings_container)
         settings_main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # 配置网格权重，使内容可以扩展
+        # 配置网格权重,使内容可以扩展
         settings_main_frame.columnconfigure(0, weight=1)
         
         # 复制限制设置
@@ -343,7 +331,7 @@ class ClipboardGUI:
         
         # 无限模式复选框
         self.unlimited_var = tk.BooleanVar()
-        unlimited_check = ttk.Checkbutton(settings_main_frame, text="无限模式（无限制）", variable=self.unlimited_var)
+        unlimited_check = ttk.Checkbutton(settings_main_frame, text="无限模式(无限制)", variable=self.unlimited_var)
         unlimited_check.grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
         
         # 最大大小设置
@@ -420,7 +408,7 @@ class ClipboardGUI:
         reset_frame = ttk.LabelFrame(settings_main_frame, text="重置所有记录")
         reset_frame.grid(row=11, column=0, sticky=(tk.W, tk.E), padx=0, pady=(0, 10))
         
-        ttk.Label(reset_frame, text="此操作将删除所有记录和本地缓存文件！").grid(row=0, column=0, pady=10)
+        ttk.Label(reset_frame, text="此操作将删除所有记录和本地缓存文件!").grid(row=0, column=0, pady=10)
         ttk.Button(reset_frame, text="重置所有记录", command=self.reset_all_records).grid(row=1, column=0, pady=(0, 10))
         
         # 按钮框架
@@ -451,7 +439,7 @@ class ClipboardGUI:
         self.days_entry.config(state="normal" if settings['retention_days'] > 0 else "disabled")
         self.autostart_var.set(settings['auto_start'])
         
-        # 检查是否有悬浮图标设置，如果没有则添加默认值
+        # 检查是否有悬浮图标设置,如果没有则添加默认值
         if 'float_icon' in settings:
             self.float_icon_var.set(settings['float_icon'])
         else:
@@ -480,7 +468,7 @@ class ClipboardGUI:
             # 获取用户输入
             unlimited_mode = self.unlimited_var.get()
             
-            # 如果不是无限模式，验证数值
+            # 如果不是无限模式,验证数值
             if not unlimited_mode:
                 max_size_mb = float(self.size_var.get())
                 max_count = int(self.count_var.get())
@@ -517,7 +505,7 @@ class ClipboardGUI:
                 float_icon=float_icon
             )
             
-            # 如果设置了自定义天数，检查并删除过期记录
+            # 如果设置了自定义天数,检查并删除过期记录
             if retention_days > 0:
                 self.db.delete_expired_records()
             
@@ -560,23 +548,10 @@ class ClipboardGUI:
         formatted_size = self.format_file_size(total_size)
         
         # 构造统计信息文本
-        stats_info = f"""
-统计信息
-{'='*50}
-
-文本记录: {text_count} 条
-文件记录: {file_count} 条
-总计: {total_count} 条
-累计大小: {formatted_size}
-
-数据库文件: {self.db.db_path}
-"""
+        stats_info = f"{total_count}条记录，累计大小{formatted_size}"
         
         # 更新显示
-        self.stats_text.config(state=tk.NORMAL)
-        self.stats_text.delete(1.0, tk.END)
-        self.stats_text.insert(tk.END, stats_info)
-        self.stats_text.config(state=tk.DISABLED)
+        self.status_label.config(text=stats_info)
     
     def load_records(self):
         """加载所有记录"""
@@ -591,7 +566,7 @@ class ClipboardGUI:
         # 确定数据库排序字段
         db_sort_field = self.get_db_sort_field(self.sort_column)
         
-        # 加载所有记录（包括文本和文件）
+        # 加载所有记录(包括文本和文件)
         text_records = self.db.get_text_records(sort_by=db_sort_field, reverse=self.sort_reverse)
         file_records = self.db.get_file_records(sort_by=db_sort_field, reverse=self.sort_reverse)
         
@@ -600,14 +575,14 @@ class ClipboardGUI:
         
         # 添加文本记录
         for record in text_records:
-            # 记录格式：(id, content, timestamp, char_count, md5_hash, number)
+            # 记录格式:(id, content, timestamp, char_count, md5_hash, number)
             record_id, content, timestamp, char_count, md5_hash, number = record
             content_preview = self.sanitize_text_for_display(content, 50)
             all_records.append((content_preview, "文本", "-", timestamp, str(number), "text", record_id))
                     
         # 添加文件记录
         for record in file_records:
-            # 记录格式：(id, original_path, saved_path, filename, file_size, file_type, md5_hash, timestamp, number)
+            # 记录格式:(id, original_path, saved_path, filename, file_size, file_type, md5_hash, timestamp, number)
             record_id, original_path, saved_path, filename, file_size, file_type, md5_hash, timestamp, number = record
             size_str = self.format_file_size(file_size)
             # 获取文件后缀作为类型显示
@@ -636,7 +611,7 @@ class ClipboardGUI:
         return column_mapping.get(column_name, "timestamp")
     
     def load_next_page(self):
-        """加载下一页记录（已废弃）"
+        """加载下一页记录(已废弃)"""
         pass
     
     def on_mouse_wheel(self, event):
@@ -665,6 +640,18 @@ class ClipboardGUI:
         # 对搜索结果进行排序
         self.sort_search_results(records)
     
+    def on_search_input(self, event):
+        """处理搜索输入事件，实现实时搜索"""
+        # 获取输入内容
+        keyword = self.search_entry.get().strip()
+        
+        # 如果有搜索关键词，则执行搜索
+        if keyword:
+            self.search_records()
+        else:
+            # 如果搜索框为空，则显示所有记录
+            self.load_records()
+    
     def sort_search_results(self, records):
         """对搜索结果进行排序并在记录标签页中显示"""
         # 创建一个包含所有记录的列表
@@ -683,7 +670,7 @@ class ClipboardGUI:
                 conn.close()
                 all_records.append((content_preview, "文本", "-", record[3], number, "text", record[1]))
             else:
-                # 文件记录（需要从数据库获取完整信息）
+                # 文件记录(需要从数据库获取完整信息)
                 conn = sqlite3.connect(self.db.db_path)
                 cursor = conn.cursor()
                 cursor.execute('SELECT file_size, number FROM file_records WHERE id = ?', (record[1],))
@@ -700,7 +687,7 @@ class ClipboardGUI:
         # 根据当前排序列进行排序
         try:
             # 确定排序索引
-            sort_index = 0  # 默认按第一列（名称或内容）排序
+            sort_index = 0  # 默认按第一列(名称或内容)排序
             if self.sort_column == "类型":
                 sort_index = 1
             elif self.sort_column == "大小":
@@ -712,11 +699,11 @@ class ClipboardGUI:
             
             # 特殊处理数值型字段
             if self.sort_column in ["大小", "次数"]:
-                # 对于大小和次数字段，尝试数值排序
+                # 对于大小和次数字段,尝试数值排序
                 def get_numeric_value(record):
                     try:
                         if self.sort_column == "大小":
-                            # 从第三列获取大小值，转换为数值
+                            # 从第三列获取大小值,转换为数值
                             size_str = record[2]
                             if size_str == "-":
                                 return 0
@@ -739,12 +726,75 @@ class ClipboardGUI:
                 # 文本类型字段使用文本排序
                 all_records.sort(key=lambda x: x[sort_index] if x[sort_index] is not None else "", reverse=self.sort_reverse)
         except (ValueError, TypeError):
-            # 如果排序失败，回退到按时间排序
+            # 如果排序失败,回退到按时间排序
             all_records.sort(key=lambda x: x[3] if x[3] is not None else "", reverse=True)
         
         # 在记录标签页中显示排序后的结果
         for record in all_records:
             self.records_tree.insert("", tk.END, values=(record[0], record[1], record[2], record[3], record[4]), tags=(record[5], record[6]))
+    
+    def copy_record_on_double_click(self, event):
+        """双击记录复制内容到剪贴板"""
+        selection = self.records_tree.selection()
+        if selection:
+            item = selection[0]
+            tags = self.records_tree.item(item, "tags")
+            values = self.records_tree.item(item, "values")
+            
+            if len(tags) >= 2:
+                record_type = tags[0]  # 记录类型(text或file)
+                record_id = tags[1]    # 记录ID
+                
+                if record_type == "text":
+                    # 从数据库获取完整文本内容
+                    conn = sqlite3.connect(self.db.db_path)
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT content FROM text_records WHERE id = ?', (record_id,))
+                    result = cursor.fetchone()
+                    conn.close()
+                    
+                    if result:
+                        full_text = result[0]
+                        self.root.clipboard_clear()
+                        self.root.clipboard_append(full_text)
+                        # 显示提示信息
+                        display_text = full_text[:20] + "..." if len(full_text) > 20 else full_text
+                        self.status_label.config(text=f"已复制：\"{display_text}\"")
+                else:
+                    # 对于文件类型，复制文件名
+                    if len(values) > 0:
+                        filename = values[0]  # 名称或内容列(文件名)
+                        self.root.clipboard_clear()
+                        self.root.clipboard_append(filename)
+                        # 显示提示信息
+                        display_text = filename[:20] + "..." if len(filename) > 20 else filename
+                        self.status_label.config(text=f"已复制文件名：\"{display_text}\"")
+    
+    def delete_selected_record_on_key(self, event):
+        """按Delete键删除选中记录"""
+        selection = self.records_tree.selection()
+        if selection:
+            item = selection[0]
+            tags = self.records_tree.item(item, "tags")
+            
+            if len(tags) >= 2:
+                record_type = tags[0]  # 记录类型(text或file)
+                record_id = tags[1]    # 记录ID
+                
+                # 删除记录
+                if record_type == "text":
+                    self.db.delete_text_record(record_id)
+                else:
+                    self.db.delete_file_record(record_id)
+                
+                # 从界面移除
+                self.records_tree.delete(item)
+                
+                # 显示提示信息
+                self.status_label.config(text="记录已删除")
+                
+                # 更新统计信息
+                self.update_statistics_display()
     
     def show_full_record(self, event):
         """显示记录的完整内容"""
@@ -754,7 +804,7 @@ class ClipboardGUI:
             tags = self.records_tree.item(item, "tags")
             
             if len(tags) >= 2:
-                record_type = tags[0]  # 记录类型（text或file）
+                record_type = tags[0]  # 记录类型(text或file)
                 record_id = tags[1]    # 记录ID
                 
                 if record_type == "text":
@@ -780,7 +830,7 @@ class ClipboardGUI:
                         text_area.insert(tk.END, full_text)
                         text_area.config(state=tk.DISABLED)
                 else:
-                    # 对于文件类型，打开文件位置
+                    # 对于文件类型,打开文件位置
                     conn = sqlite3.connect(self.db.db_path)
                     cursor = conn.cursor()
                     cursor.execute('SELECT saved_path FROM file_records WHERE id = ?', (record_id,))
@@ -793,88 +843,8 @@ class ClipboardGUI:
                     else:
                         messagebox.showwarning("警告", "文件不存在")
     
-    def copy_selected_record(self):
-        """复制选中的记录内容到剪贴板"""
-        # 标记用户操作正在进行
-        self.user_action_in_progress = True
-        try:
-            selection = self.records_tree.selection()
-            if selection:
-                item = selection[0]
-                tags = self.records_tree.item(item, "tags")
-                
-                if len(tags) >= 2:
-                    record_type = tags[0]  # 记录类型（text或file）
-                    record_id = tags[1]    # 记录ID
-                    
-                    if record_type == "text":
-                        # 从数据库获取完整文本内容
-                        conn = sqlite3.connect(self.db.db_path)
-                        cursor = conn.cursor()
-                        cursor.execute('SELECT content FROM text_records WHERE id = ?', (record_id,))
-                        result = cursor.fetchone()
-                        conn.close()
-                        
-                        if result:
-                            full_text = result[0]
-                            self.root.clipboard_clear()
-                            self.root.clipboard_append(full_text)
-                            messagebox.showinfo("提示", "文本已复制到剪贴板")
-                        else:
-                            messagebox.showwarning("警告", "无法获取文本内容")
-                    else:
-                        # 复制文件名
-                        values = self.records_tree.item(item, "values")
-                        if len(values) > 0:
-                            filename = values[0]  # 名称或内容列（文件名）
-                            self.root.clipboard_clear()
-                            self.root.clipboard_append(filename)
-                            messagebox.showinfo("提示", "文件名已复制到剪贴板")
-            else:
-                messagebox.showwarning("警告", "请先选择一条记录")
-        finally:
-            # 标记用户操作完成
-            self.user_action_in_progress = False
+
     
-    def delete_selected_record(self):
-        """删除选中的记录"""
-        # 标记用户操作正在进行
-        self.user_action_in_progress = True
-        try:
-            selection = self.records_tree.selection()
-            if selection:
-                if messagebox.askyesno("确认", "确定要删除这条记录吗？"):
-                    item = selection[0]
-                    tags = self.records_tree.item(item, "tags")
-                    
-                    if len(tags) >= 2:
-                        record_type = tags[0]  # 记录类型（text或file）
-                        record_id = tags[1]    # 记录ID
-                        
-                        conn = sqlite3.connect(self.db.db_path)
-                        cursor = conn.cursor()
-                        
-                        if record_type == "text":
-                            # 删除文本记录
-                            self.db.delete_text_record(record_id)
-                        else:
-                            # 删除文件记录
-                            cursor.execute('SELECT saved_path FROM file_records WHERE id = ?', (record_id,))
-                            result = cursor.fetchone()
-                            if result:
-                                saved_path = result[0]
-                                self.db.delete_file_record(record_id)
-                                # 尝试删除文件（如果不再被引用）
-                                self.check_and_delete_file(saved_path)
-                        
-                        conn.close()
-                        self.load_records()
-                        messagebox.showinfo("提示", "记录已删除")
-            else:
-                messagebox.showwarning("警告", "请先选择一条记录")
-        finally:
-            # 标记用户操作完成
-            self.user_action_in_progress = False
 
     def format_file_size(self, size_bytes):
         """格式化文件大小"""
@@ -904,7 +874,7 @@ class ClipboardGUI:
             confirm_window.transient(self.root)
             confirm_window.grab_set()
             
-            ttk.Label(confirm_window, text="此操作将删除所有记录和本地缓存文件！", foreground="red", font=("Arial", 10, "bold")).pack(pady=(20, 10))
+            ttk.Label(confirm_window, text="此操作将删除所有记录和本地缓存文件!", foreground="red", font=("Arial", 10, "bold")).pack(pady=(20, 10))
             ttk.Label(confirm_window, text="请输入以下文本以确认操作:").pack()
             
             confirmation_text = "确认重置所有记录"
@@ -936,7 +906,7 @@ class ClipboardGUI:
                     confirm_window.destroy()
                     messagebox.showinfo("提示", "所有记录已重置")
                 else:
-                    messagebox.showwarning("警告", "输入文本不匹配，请重新输入")
+                    messagebox.showwarning("警告", "输入文本不匹配,请重新输入")
             
             def cancel_reset():
                 confirm_window.destroy()
@@ -972,7 +942,7 @@ class ClipboardGUI:
             
             # 无限模式复选框
             unlimited_var = tk.BooleanVar(value=settings['unlimited_mode'])
-            unlimited_check = ttk.Checkbutton(settings_window, text="无限模式（无限制）", variable=unlimited_var)
+            unlimited_check = ttk.Checkbutton(settings_window, text="无限模式(无限制)", variable=unlimited_var)
             unlimited_check.pack(pady=(0, 10))
             
             # 最大大小设置
@@ -1046,7 +1016,7 @@ class ClipboardGUI:
                     # 获取用户输入
                     unlimited_mode = unlimited_var.get()
                     
-                    # 如果不是无限模式，验证数值
+                    # 如果不是无限模式,验证数值
                     if not unlimited_mode:
                         max_size_mb = float(size_var.get())
                         max_count = int(count_var.get())
@@ -1079,7 +1049,7 @@ class ClipboardGUI:
                         auto_start=auto_start
                     )
                     
-                    # 如果设置了自定义天数，检查并删除过期记录
+                    # 如果设置了自定义天数,检查并删除过期记录
                     if retention_days > 0:
                         self.db.delete_expired_records()
                     
@@ -1156,7 +1126,7 @@ class ClipboardGUI:
                     winreg.DeleteValue(key, "ClipboardManager")
                     winreg.CloseKey(key)
                 except FileNotFoundError:
-                    # 如果值不存在，忽略错误
+                    # 如果值不存在,忽略错误
                     pass
         except Exception as e:
             print(f"设置开机自启时出错: {e}")
@@ -1172,22 +1142,22 @@ class ClipboardGUI:
     
     def create_float_icon(self):
         """创建悬浮图标"""
-        # 如果悬浮图标已经存在，先销毁
+        # 如果悬浮图标已经存在,先销毁
         self.destroy_float_icon()
         
         # 创建悬浮窗口
         self.float_window = tk.Toplevel(self.root)
         self.float_window.title("悬浮图标")
-        self.float_window.geometry("50x50")  # 改为80x80大小，符合需求说明
+        self.float_window.geometry("50x50")  # 改为80x80大小,符合需求说明
         self.float_window.overrideredirect(True)  # 去除窗口边框
         self.float_window.attributes("-topmost", True)  # 置顶显示
-        self.float_window.attributes("-alpha", 0.15)  # 设置透明度为30%，符合需求说明
+        self.float_window.attributes("-alpha", 0.15)  # 设置透明度为30%,符合需求说明
         
         # 获取屏幕尺寸
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         
-        # 设置默认位置为右下角（右边像素60，底部120）
+        # 设置默认位置为右下角(右边像素60,底部120)
         x = screen_width - 50 - 60  # 距离右边60像素
         y = screen_height - 50 - 120  # 距离底部120像素
         self.float_window.geometry(f"50x50+{x}+{y}")
@@ -1198,7 +1168,7 @@ class ClipboardGUI:
             image = Image.open(image_path)
             image = image.resize((50, 50), Image.LANCZOS)  # 调整图片大小
             
-            # 移除了圆形遮罩，使用原始图片
+            # 移除了圆形遮罩,使用原始图片
             
             photo = ImageTk.PhotoImage(image)
             
@@ -1207,7 +1177,7 @@ class ClipboardGUI:
             label.image = photo  # 保持引用防止被垃圾回收
             label.pack(fill=tk.BOTH, expand=True)
         except Exception as e:
-            # 如果图片加载失败，使用默认的蓝色背景和文本
+            # 如果图片加载失败,使用默认的蓝色背景和文本
             print(f"加载2.jpg图片失败: {e}")
             self.float_window.configure(bg="#496D89")
             
@@ -1236,7 +1206,7 @@ class ClipboardGUI:
         """处理悬浮图标点击事件"""
         # 检查是否是点击而不是拖动
         if abs(event.x - self.float_icon_x) < 5 and abs(event.y - self.float_icon_y) < 5:
-            # 直接显示悬浮面板，不需要延迟
+            # 直接显示悬浮面板,不需要延迟
             self.show_float_panel(center_on_icon=True)
     
     def show_float_panel_on_hover(self, event):
@@ -1244,7 +1214,7 @@ class ClipboardGUI:
         self.show_float_panel(center_on_icon=True)
     
     def show_float_panel_delayed(self):
-        """延迟显示悬浮面板，用于区分单击和双击"""
+        """延迟显示悬浮面板, 用于区分单击和双击"""
         self.show_float_panel(center_on_icon=True)
     
     def show_main_window_from_float_icon(self, event):
@@ -1257,7 +1227,7 @@ class ClipboardGUI:
         if self.float_panel:
             self.float_panel.destroy()
         
-        # 获取最近记录（增加到50条）
+        # 获取最近记录(增加到50条)
         text_records = self.db.get_text_records(50)  # 最多50条记录
         file_records = self.db.get_file_records(50)
         
@@ -1269,7 +1239,7 @@ class ClipboardGUI:
         for record in file_records:
             all_records.append(("file", record[3], record[7]))  # 类型, 文件名, 时间
         
-        # 按时间排序（最新的在前面）
+        # 按时间排序(最新的在前面)
         all_records.sort(key=lambda x: x[2], reverse=True)
         
         # 只取前50条
@@ -1285,7 +1255,7 @@ class ClipboardGUI:
         # 设置面板样式
         self.float_panel.configure(bg="white")
         
-        # 确保面板在屏幕范围内，并根据需要居中显示
+        # 确保面板在屏幕范围内,并根据需要居中显示
         if center_on_icon:
             self.position_float_panel_above_icon(400)
         else:
@@ -1334,23 +1304,23 @@ class ClipboardGUI:
                 # 文件记录
                 display_text = content
             
-            # 处理文本，确保只显示一行并去除换行符
+            # 处理文本,确保只显示一行并去除换行符
             display_text = display_text.replace('\n', ' ').replace('\r', ' ')
-            # 如果文本过长，截取并添加省略号
+            # 如果文本过长,截取并添加省略号
             if len(display_text) > 50:
                 display_text = display_text[:50] + "..."
             
-            # 插入记录到Text控件，减小记录之间的间距
+            # 插入记录到Text控件,减小记录之间的间距
             self.records_text.insert(tk.END, display_text)
             
-            # 移除记录之间的额外换行符，使记录更紧密
+            # 移除记录之间的额外换行符,使记录更紧密
             # 只在记录之间添加最小的分隔
             if i < len(all_records) - 1:  # 不为最后一个元素添加分隔
                 self.records_text.insert(tk.END, "\n")
         
         self.records_text.config(state=tk.DISABLED)  # 禁止编辑
         
-        # 如果没有记录，显示提示信息
+        # 如果没有记录,显示提示信息
         if not all_records:
             self.records_text.config(state=tk.NORMAL)
             self.records_text.delete(1.0, tk.END)
@@ -1366,11 +1336,11 @@ class ClipboardGUI:
                                font=("Arial", 9), cursor="hand2")
         footer_label.pack(expand=True)
         
-        # 绑定底部点击事件，显示主窗口
+        # 绑定底部点击事件,显示主窗口
         footer_frame.bind("<Button-1>", self.show_window_and_hide_panel)
         footer_label.bind("<Button-1>", self.show_window_and_hide_panel)
         
-        # 绑定焦点事件，鼠标移出时隐藏面板
+        # 绑定焦点事件,鼠标移出时隐藏面板
         self.float_panel.bind("<FocusOut>", self.hide_float_panel)
         self.float_panel.bind("<Leave>", self.hide_float_panel_on_leave)
         
@@ -1396,7 +1366,7 @@ class ClipboardGUI:
             bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         except Exception as e:
             print(f"创建圆角背景失败: {e}")
-            # 如果创建圆角背景失败，使用普通背景色
+            # 如果创建圆角背景失败,使用普通背景色
             parent.configure(bg=color)
     
     def on_item_enter(self, frame, label):
@@ -1423,7 +1393,7 @@ class ClipboardGUI:
         for record in file_records:
             all_records.append(("file", record[3], record[7]))  # 类型, 文件名, 时间
         
-        # 按时间排序（最新的在前面）
+        # 按时间排序(最新的在前面)
         all_records.sort(key=lambda x: x[2], reverse=True)
         
         # 只取前15条
@@ -1465,11 +1435,11 @@ class ClipboardGUI:
         # 面板尺寸
         panel_width = 200
         
-        # 计算面板位置（默认在图标上方）
+        # 计算面板位置(默认在图标上方)
         panel_x = icon_x + (icon_width // 2) - (panel_width // 2)  # 水平居中对齐
         panel_y = icon_y - panel_height - 5  # 在图标上方5px处
         
-        # 边界检查，确保面板在屏幕内
+        # 边界检查,确保面板在屏幕内
         # X轴边界检查
         if panel_x < 0:
             panel_x = 0
@@ -1478,7 +1448,7 @@ class ClipboardGUI:
         
         # Y轴边界检查
         if panel_y < 0:
-            # 如果上方空间不足，显示在图标下方
+            # 如果上方空间不足,显示在图标下方
             panel_y = icon_y + icon_height + 5
         
         # 确保面板底部也在屏幕内
@@ -1488,7 +1458,7 @@ class ClipboardGUI:
         self.float_panel.geometry(f"{panel_width}x{panel_height}+{panel_x}+{panel_y}")
     
     def position_float_panel_centered(self, panel_height):
-        """将悬浮面板居中显示在悬浮图标上，完全覆盖图标"""
+        """将悬浮面板居中显示在悬浮图标上, 完全覆盖图标"""
         # 获取屏幕尺寸
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
@@ -1502,7 +1472,7 @@ class ClipboardGUI:
         # 面板尺寸
         panel_width = 200
         
-        # 计算面板位置，使其完全覆盖图标并居中
+        # 计算面板位置,使其完全覆盖图标并居中
         panel_x = icon_x + (icon_width // 2) - (panel_width // 2)
         panel_y = icon_y + (icon_height // 2) - (panel_height // 2)
         
@@ -1520,7 +1490,7 @@ class ClipboardGUI:
         self.float_panel.geometry(f"{panel_width}x{panel_height}+{panel_x}+{panel_y}")
     
     def position_float_panel_above_icon(self, panel_height):
-        """将悬浮面板显示在悬浮图标上方，确保面板在屏幕内且不覆盖图标"""
+        """将悬浮面板显示在悬浮图标上方,确保面板在屏幕内且不覆盖图标"""
         # 获取屏幕尺寸
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
@@ -1534,11 +1504,11 @@ class ClipboardGUI:
         # 面板尺寸
         panel_width = 200
         
-        # 计算面板位置（在图标上方）
+        # 计算面板位置(在图标上方)
         panel_x = icon_x + (icon_width // 2) - (panel_width // 2)  # 水平居中对齐
         panel_y = icon_y - panel_height - 5  # 在图标上方5px处
         
-        # 边界检查，确保面板在屏幕内
+        # 边界检查,确保面板在屏幕内
         # X轴边界检查
         if panel_x < 0:
             panel_x = 0
@@ -1547,7 +1517,7 @@ class ClipboardGUI:
         
         # Y轴边界检查
         if panel_y < 0:
-            # 如果上方空间不足，显示在图标下方
+            # 如果上方空间不足,显示在图标下方
             panel_y = icon_y + icon_height + 5
         
         # 确保面板底部也在屏幕内
@@ -1558,17 +1528,17 @@ class ClipboardGUI:
     
     def hide_float_panel(self, event=None):
         """隐藏悬浮面板"""
-        # 延迟隐藏，避免焦点切换时立即隐藏
+        # 延迟隐藏,避免焦点切换时立即隐藏
         self.float_window.after(100, self._hide_float_panel)
     
     def hide_float_panel_on_leave(self, event=None):
         """鼠标移出面板时隐藏面板"""
-        # 延迟隐藏，避免意外触发
+        # 延迟隐藏,避免意外触发
         self.float_panel.after(200, self._check_and_hide_float_panel)
     
     def check_and_hide_float_panel(self, event=None):
-        """检查鼠标位置并决定是否隐藏面板（处理悬浮图标和面板之间的移动）"""
-        # 延迟检查，给鼠标时间移动到面板上
+        """检查鼠标位置并决定是否隐藏面板(处理悬浮图标和面板之间的移动)"""
+        # 延迟检查,给鼠标时间移动到面板上
         self.float_window.after(100, self._check_mouse_position_and_hide)
     
     def _check_and_hide_float_panel(self):
@@ -1586,7 +1556,7 @@ class ClipboardGUI:
                 import pyautogui
                 mouse_x, mouse_y = pyautogui.position()
                 
-                # 如果鼠标不在面板区域内，则隐藏面板
+                # 如果鼠标不在面板区域内,则隐藏面板
                 if not (x1 <= mouse_x <= x2 and y1 <= mouse_y <= y2):
                     self.hide_float_panel()
         except Exception as e:
@@ -1594,9 +1564,9 @@ class ClipboardGUI:
             self.hide_float_panel()
     
     def _check_mouse_position_and_hide(self):
-        """检查鼠标是否在悬浮图标或面板上，否则隐藏面板"""
+        """检查鼠标是否在悬浮图标或面板上,否则隐藏面板"""
         try:
-            # 如果面板不存在，直接返回
+            # 如果面板不存在,直接返回
             if not self.float_panel or not self.float_panel.winfo_exists():
                 return
             
@@ -1616,7 +1586,7 @@ class ClipboardGUI:
             panel_x2 = panel_x1 + self.float_panel.winfo_width()
             panel_y2 = panel_y1 + self.float_panel.winfo_height()
             
-            # 如果鼠标不在悬浮图标和面板上，则隐藏面板
+            # 如果鼠标不在悬浮图标和面板上,则隐藏面板
             if not ((icon_x1 <= mouse_x <= icon_x2 and icon_y1 <= mouse_y <= icon_y2) or 
                    (panel_x1 <= mouse_x <= panel_x2 and panel_y1 <= mouse_y <= panel_y2)):
                 self.hide_float_panel()
@@ -1642,7 +1612,7 @@ class ClipboardGUI:
         self.float_icon_y = event.y
     
     def move_float_icon(self, event):
-        """移动悬浮图标，增加边界检查确保图标在屏幕内"""
+        """移动悬浮图标,增加边界检查确保图标在屏幕内"""
         # 计算新位置
         new_x = self.float_window.winfo_x() + event.x - self.float_icon_x
         new_y = self.float_window.winfo_y() + event.y - self.float_icon_y
@@ -1685,9 +1655,9 @@ class ClipboardGUI:
     
     def update_records(self):
         """更新记录显示"""
-        # 只在窗口显示时更新，避免不必要的资源消耗
+        # 只在窗口显示时更新,避免不必要的资源消耗
         # 并且只有在没有用户操作进行时才更新
-        # 当窗口有焦点时不更新，避免干扰用户操作
+        # 当窗口有焦点时不更新,避免干扰用户操作
         if not self.is_hidden and not self.user_action_in_progress and not self.has_focus:
             self.load_records()
         
