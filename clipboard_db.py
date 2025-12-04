@@ -43,41 +43,9 @@ class ClipboardDatabase:
             # 如果是python脚本
             program_dir = os.path.dirname(os.path.abspath(__file__))
         
-        # 尝试在程序目录创建数据库
+        # 优先使用程序目录的数据库（即使已存在其他路径的数据库）
         db_path = os.path.join(program_dir, "clipboard_history.db")
-        if self._test_db_path(db_path):
-            return db_path
-        
-        # 尝试在用户数据目录创建
-        try:
-            import appdirs
-            user_data_dir = appdirs.user_data_dir("ClipboardManager", "ClipboardManager")
-            os.makedirs(user_data_dir, exist_ok=True)
-            db_path = os.path.join(user_data_dir, "clipboard_history.db")
-            if self._test_db_path(db_path):
-                return db_path
-        except ImportError:
-            pass
-        
-        # 尝试在AppData目录创建
-        appdata_dir = os.environ.get('APPDATA')
-        if appdata_dir:
-            clipboard_dir = os.path.join(appdata_dir, "ClipboardManager")
-            os.makedirs(clipboard_dir, exist_ok=True)
-            db_path = os.path.join(clipboard_dir, "clipboard_history.db")
-            if self._test_db_path(db_path):
-                return db_path
-        
-        # 尝试在临时目录创建
-        temp_dir = os.environ.get('TEMP', os.environ.get('TMP', '/tmp'))
-        clipboard_dir = os.path.join(temp_dir, "ClipboardManager")
-        os.makedirs(clipboard_dir, exist_ok=True)
-        db_path = os.path.join(clipboard_dir, "clipboard_history.db")
-        if self._test_db_path(db_path):
-            return db_path
-        
-        # 最后回退到程序目录
-        return os.path.join(program_dir, "clipboard_history.db")
+        return db_path
     
     def _test_db_path(self, db_path):
         """

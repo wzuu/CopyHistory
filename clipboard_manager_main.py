@@ -130,9 +130,7 @@ class ClipboardDatabase:
             import sqlite3
             conn = sqlite3.connect(db_path)
             conn.close()
-            # 如果文件已存在，删除测试文件
-            if os.path.exists(db_path):
-                os.remove(db_path)
+            # 不要删除已存在的数据库文件
             return True
         except Exception as e:
             print(f"测试数据库路径 {db_path} 失败: {e}")
