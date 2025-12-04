@@ -36,9 +36,9 @@ def convert_jpg_to_ico(jpg_path, ico_path, size=(32, 32)):
         return False
 
 if __name__ == "__main__":
-    # 转换2.jpg为2.ico
+    # 转换2.jpg为mini.ico
     jpg_file = "2.jpg"
-    ico_file = "2.ico"
+    ico_file = "mini.ico"
     
     if os.path.exists(jpg_file):
         convert_jpg_to_ico(jpg_file, ico_file, (32, 32))

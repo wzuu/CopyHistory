@@ -12,13 +12,13 @@ from cx_Freeze import setup, Executable
 try:
     from version import __version__
 except ImportError:
-    __version__ = "1.1.0"  # 默认版本号
+    __version__ = "1.1.0"
 # 获取当前目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 包含的文件
 include_files = [
-    ("2.ico", "2.ico"),
+    ("mini.ico", "mini.ico"),
     ("icon.ico", "icon.ico"),
     ("clipboard_history.db", "clipboard_history.db"),
 ]
@@ -38,18 +38,22 @@ packages = [
 includes = [
     "clipboard_db",
     "clipboard_gui",
+    "clipboard_manager_main",
     "clipboard_content_detector"
 ]
 
 # 排除的模块
 excludes = []
 
-# 构建选项
+# 构建选项 - 优化打包配置
 build_exe_options = {
     "packages": packages,
     "includes": includes,
     "excludes": excludes,
     "include_files": include_files,
+    "optimize": 2,  # 优化级别
+    "zip_include_packages": ["encodings", "tkinter", "PIL", "pystray"],  # 将指定包打包到zip文件中
+    "build_exe": "build/dist"  # 构建输出目录
 }
 
 # 基础设置
@@ -57,25 +61,13 @@ base = None
 if sys.platform == "win32":
     base = "Win32GUI"  # GUI应用程序
 
-# 可执行文件配置
+# 可执行文件配置 - 只包含主程序
 executables = [
     Executable(
         script="run_clipboard_manager.py",
         target_name="剪贴板管理器.exe",
-        icon="2.ico",
+        icon="mini.ico",
         base=base
-    ),
-    Executable(
-        script="view_clipboard_history.py",
-        target_name="查看剪贴板历史.exe",
-        icon="2.ico",
-        base=None  # 控制台应用程序
-    ),
-    Executable(
-        script="clipboard_content_detector.py",
-        target_name="剪贴板内容检测器.exe",
-        icon="2.ico",
-        base=None  # 控制台应用程序
     )
 ]
 

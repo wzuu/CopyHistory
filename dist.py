@@ -22,7 +22,7 @@ def create_dist_package():
     print(f"创建版本 {__version__} 的发布包...")
     
     # 检查构建目录是否存在
-    build_dir = "build/exe.win-amd64-3.11"
+    build_dir = "build/dist"
     if not os.path.exists(build_dir):
         print("错误: 构建目录不存在，请先运行构建命令")
         print("构建命令: python build_exe.py build")
@@ -35,9 +35,7 @@ def create_dist_package():
     # 复制必要的文件到发布目录
     files_to_copy = [
         "剪贴板管理器.exe",
-        "查看剪贴板历史.exe",
-        "剪贴板内容检测器.exe",
-        "2.ico",
+        "mini.ico",
         "icon.ico",
         "clipboard_history.db"
     ]
@@ -64,6 +62,13 @@ def create_dist_package():
     if os.path.exists(share_src):
         shutil.copytree(share_src, share_dst, dirs_exist_ok=True)
         print("已复制: share目录")
+    
+    # 复制clipboard_files目录（如果存在）
+    clipboard_files_src = os.path.join(build_dir, "clipboard_files")
+    clipboard_files_dst = os.path.join(dist_dir, "clipboard_files")
+    if os.path.exists(clipboard_files_src):
+        shutil.copytree(clipboard_files_src, clipboard_files_dst, dirs_exist_ok=True)
+        print("已复制: clipboard_files目录")
     
     # 复制发布说明
     release_notes = f"RELEASE_NOTES_v{__version__}.md"

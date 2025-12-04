@@ -51,7 +51,7 @@ class ClipboardGUI:
         
         # 设置窗口图标
         try:
-            icon_path = resource_path("2.ico")
+            icon_path = resource_path("mini.ico")
             if os.path.exists(icon_path):
                 self.root.iconbitmap(icon_path)
         except Exception as e:
@@ -154,8 +154,8 @@ class ClipboardGUI:
     def create_tray_icon(self):
         """创建系统托盘图标"""
         try:
-            # 使用2.ico文件作为图标
-            icon_path = resource_path("2.ico")
+            # 使用mini.ico文件作为图标
+            icon_path = resource_path("mini.ico")
             if os.path.exists(icon_path):
                 image = Image.open(icon_path)
             else:
@@ -1263,8 +1263,8 @@ class ClipboardGUI:
         self.float_window.geometry(f"50x50+{x}+{y}")
         
         try:
-            # 尝试加载2.jpg图片
-            image_path = resource_path("2.jpg")
+            # 尝试加载mini.ico图片
+            image_path = resource_path("mini.ico")
             image = Image.open(image_path)
             image = image.resize((50, 50), Image.LANCZOS)  # 调整图片大小
             
@@ -1278,7 +1278,7 @@ class ClipboardGUI:
             label.pack(fill=tk.BOTH, expand=True)
         except Exception as e:
             # 如果图片加载失败,使用默认的蓝色背景和文本
-            print(f"加载2.jpg图片失败: {e}")
+            print(f"加载mini.ico图片失败: {e}")
             self.float_window.configure(bg="#496D89")
             
             # 在窗口中央添加文本
