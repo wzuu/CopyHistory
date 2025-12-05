@@ -204,15 +204,16 @@ class RecordsTab(QWidget):
         
         # 设置列宽按百分比
         header = self.tree_view.header()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)  # 名称或内容列占剩余空间
+        header.setSectionResizeMode(0, QHeaderView.Interactive)  # 名称或内容列可交互调整
         header.setSectionResizeMode(1, QHeaderView.Fixed)    # 类型列固定宽度
         header.setSectionResizeMode(2, QHeaderView.Fixed)    # 大小列固定宽度
         header.setSectionResizeMode(3, QHeaderView.Fixed)    # 时间列固定宽度
         
         # 设置固定列的具体宽度（基于800px窗口宽度的大致百分比）
-        self.tree_view.setColumnWidth(1, 80)   # 类型列约占10%
-        self.tree_view.setColumnWidth(2, 90)   # 大小列约占11%
-        self.tree_view.setColumnWidth(3, 150)  # 时间列约占19%
+        self.tree_view.setColumnWidth(0, 450)  # 名称或内容列
+        self.tree_view.setColumnWidth(1, 80)   # 类型列
+        self.tree_view.setColumnWidth(2, 90)   # 大小列
+        self.tree_view.setColumnWidth(3, 75)   # 时间列
         # 名称或内容列将自动填充剩余约60%的空间
         
         layout.addWidget(self.tree_view)
