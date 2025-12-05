@@ -605,6 +605,10 @@ class ClipboardManagerGUI(QMainWindow):
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.updateRecords)
         self.float_window = None  # 悬浮窗口引用
+        self.panel_container = None  # 悬浮面板容器引用
+        self.float_panel = None  # 悬浮面板引用
+        self.hide_panel_timer = None  # 隐藏面板的定时器
+        self.float_icon_pos = QPoint(0, 0)  # 鼠标位置
         self.setupUI()
         self.setupSystemTray()
         self.checkAutoStart()
@@ -918,10 +922,6 @@ class ClipboardManagerGUI(QMainWindow):
         # 记录鼠标位置
         self.float_icon_pos = QPoint(0, 0)
         
-        # 悬浮面板引用
-        self.float_panel = None
-        self.hide_panel_timer = None  # 隐藏面板的定时器
-        
         # 显示悬浮图标
         self.float_window.show()
         
@@ -979,31 +979,38 @@ class ClipboardManagerGUI(QMainWindow):
         if not all_records:
             return  # 没有记录则不显示面板
             
-        # 创建悬浮面板
+        # 创建悬浮面板容器（白色外框背景）
         from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame
-        self.float_panel = QWidget()
-        self.float_panel.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
-        self.float_panel.setAttribute(Qt.WA_TranslucentBackground)
-        self.float_panel.setStyleSheet("""
+        self.panel_container = QWidget()
+        self.panel_container.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.panel_container.setAttribute(Qt.WA_TranslucentBackground)
+        self.panel_container.setStyleSheet("""
             QWidget {
-                background-color: rgba(255, 255, 255, 0.95);
-                border: 1px solid rgba(0, 0, 0, 0.1);
-                border-radius: 10px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 12px;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
             }
         """)
         
-        # 标题栏
+        # 创建主要内容面板
+        self.float_panel = QWidget()
+        self.float_panel.setStyleSheet("""
+            QWidget {
+                background-color: rgba(255, 255, 255, 0.95);
+                border-radius: 0px;
+            }
+        """)
+        
+        # 标题栏（去掉圆角）
         title_bar = QFrame()
         title_bar.setStyleSheet("""
             QFrame {
                 background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #4A90E2, stop: 1 #1C5FAF);
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
                 border: none;
             }
         """)
-        title_bar.setFixedHeight(35)
+        title_bar.setFixedHeight(30)  # 缩小标题栏高度
         title_label = QLabel("📋 剪贴板历史")
         title_label.setStyleSheet("""
             QLabel {
@@ -1021,7 +1028,7 @@ class ClipboardManagerGUI(QMainWindow):
         
         # 内容区域
         content_layout = QVBoxLayout()
-        content_layout.setSpacing(3)
+        content_layout.setSpacing(2)
         content_layout.setContentsMargins(8, 8, 8, 8)
         
         # 添加记录项
@@ -1038,13 +1045,13 @@ class ClipboardManagerGUI(QMainWindow):
                     border: 1px solid rgba(74, 144, 226, 0.3);
                 }
             """)
-            item_widget.setFixedHeight(45)
+            item_widget.setFixedHeight(40)  # 缩小每项高度
             
             item_layout = QHBoxLayout(item_widget)
             item_layout.setContentsMargins(10, 5, 10, 5)
             
             # 内容预览
-            preview = content[:35] + "..." if len(content) > 35 else content
+            preview = content[:50] + "..." if len(content) > 50 else content  # 增加显示字符数
             content_label = QLabel(preview)
             content_label.setStyleSheet("""
                 QLabel {
@@ -1073,26 +1080,31 @@ class ClipboardManagerGUI(QMainWindow):
             # 绑定点击事件
             item_widget.mousePressEvent = lambda e, rt=record_type, rid=record_id: self.copyRecordFromFloatPanel(rt, rid)
         
-        # 主布局
+        # 主内容布局
         main_layout = QVBoxLayout(self.float_panel)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         main_layout.addWidget(title_bar)
         main_layout.addLayout(content_layout)
         
+        # 容器布局
+        container_layout = QVBoxLayout(self.panel_container)
+        container_layout.setContentsMargins(1, 1, 1, 1)  # 外框边距
+        container_layout.addWidget(self.float_panel)
+        
         # 设置面板位置（在悬浮图标旁边）
         icon_pos = self.float_window.pos()
-        panel_x = icon_pos.x() - 210  # 在图标左侧，留出一些间隙
+        panel_x = icon_pos.x() - 260  # 在图标左侧，留出一些间隙，增加面板宽度
         panel_y = icon_pos.y()
-        self.float_panel.move(panel_x, panel_y)
-        self.float_panel.setFixedSize(220, 35 + len(all_records) * 51)  # 标题栏+记录项高度
+        self.panel_container.move(panel_x, panel_y)
+        self.panel_container.setFixedSize(270, 32 + len(all_records) * 44)  # 调整尺寸：更宽更矮
         
         # 绑定面板的鼠标事件
-        self.float_panel.enterEvent = self.onFloatPanelEnter
-        self.float_panel.leaveEvent = self.onFloatPanelLeave
+        self.panel_container.enterEvent = self.onFloatPanelEnter
+        self.panel_container.leaveEvent = self.onFloatPanelLeave
         
         # 显示面板
-        self.float_panel.show()
+        self.panel_container.show()
         
     def onFloatPanelEnter(self, event):
         """鼠标进入悬浮面板"""
@@ -1106,9 +1118,9 @@ class ClipboardManagerGUI(QMainWindow):
         
     def hideFloatPanel(self):
         """隐藏悬浮面板"""
-        if self.float_panel:
-            self.float_panel.close()
-            self.float_panel = None
+        if self.panel_container:
+            self.panel_container.close()
+            self.panel_container = None
         # 停止隐藏面板的定时器
         if self.hide_panel_timer and self.hide_panel_timer.isActive():
             self.hide_panel_timer.stop()
