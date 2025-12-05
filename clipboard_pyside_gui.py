@@ -908,6 +908,8 @@ class ClipboardManagerGUI(QMainWindow):
         self.float_window.move(x, y)
         
         # 绑定鼠标事件到整个窗口
+        self.float_window.enterEvent = self.onFloatIconEnter
+        self.float_window.leaveEvent = self.onFloatIconLeave
         self.float_window.mousePressEvent = self.startMoveFloatIcon
         self.float_window.mouseMoveEvent = self.moveFloatIcon
         self.float_window.mouseReleaseEvent = self.handleFloatIconClick
@@ -916,8 +918,230 @@ class ClipboardManagerGUI(QMainWindow):
         # 记录鼠标位置
         self.float_icon_pos = QPoint(0, 0)
         
+        # 悬浮面板引用
+        self.float_panel = None
+        self.hide_panel_timer = None  # 隐藏面板的定时器
+        
         # 显示悬浮图标
         self.float_window.show()
+        
+    def onFloatIconEnter(self, event):
+        """鼠标进入悬浮图标区域"""
+        # 如果有隐藏面板的定时器，取消它
+        if self.hide_panel_timer and self.hide_panel_timer.isActive():
+            self.hide_panel_timer.stop()
+        self.showFloatPanel()
+        
+    def onFloatIconLeave(self, event):
+        """鼠标离开悬浮图标区域"""
+        # 添加延迟隐藏，防止鼠标移动到面板上时立即消失
+        self.scheduleHideFloatPanel()
+        
+    def scheduleHideFloatPanel(self):
+        """安排隐藏悬浮面板"""
+        if self.hide_panel_timer is None:
+            self.hide_panel_timer = QTimer()
+            self.hide_panel_timer.setSingleShot(True)
+            self.hide_panel_timer.timeout.connect(self.checkAndHideFloatPanel)
+        self.hide_panel_timer.start(300)  # 300毫秒延迟隐藏
+        
+    def checkAndHideFloatPanel(self):
+        """检查并隐藏悬浮面板"""
+        # 只有当面板存在且鼠标不在面板上时才隐藏
+        if self.float_panel:
+            self.hideFloatPanel()
+            
+    def showFloatPanel(self):
+        """显示最近记录悬浮面板"""
+        # 销毁已存在的面板
+        self.hideFloatPanel()
+        
+        # 获取最近5条记录
+        text_records = self.db.get_text_records(5)
+        file_records = self.db.get_file_records(5)
+        
+        # 合并记录并按时间排序
+        all_records = []
+        for record in text_records:
+            # 类型, 内容, 时间, ID
+            all_records.append(("text", record[1], record[2], record[0]))
+            
+        for record in file_records:
+            # 类型, 文件名, 时间, ID
+            all_records.append(("file", record[3], record[7], record[0]))
+            
+        # 按时间排序(最新的在前面)
+        all_records.sort(key=lambda x: x[2], reverse=True)
+        
+        # 只取前5条
+        all_records = all_records[:5]
+        
+        if not all_records:
+            return  # 没有记录则不显示面板
+            
+        # 创建悬浮面板
+        from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame
+        self.float_panel = QWidget()
+        self.float_panel.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.float_panel.setAttribute(Qt.WA_TranslucentBackground)
+        self.float_panel.setStyleSheet("""
+            QWidget {
+                background-color: rgba(255, 255, 255, 0.95);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+        """)
+        
+        # 标题栏
+        title_bar = QFrame()
+        title_bar.setStyleSheet("""
+            QFrame {
+                background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #4A90E2, stop: 1 #1C5FAF);
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                border: none;
+            }
+        """)
+        title_bar.setFixedHeight(35)
+        title_label = QLabel("📋 剪贴板历史")
+        title_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: bold;
+                font-size: 12px;
+                background: transparent;
+            }
+        """)
+        title_label.setAlignment(Qt.AlignCenter)
+        
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.addWidget(title_label)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 内容区域
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(3)
+        content_layout.setContentsMargins(8, 8, 8, 8)
+        
+        # 添加记录项
+        for record_type, content, timestamp, record_id in all_records:
+            item_widget = QFrame()
+            item_widget.setStyleSheet("""
+                QFrame {
+                    background-color: rgba(255, 255, 255, 0.8);
+                    border: 1px solid rgba(0, 0, 0, 0.05);
+                    border-radius: 6px;
+                }
+                QFrame:hover {
+                    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #E3F2FD, stop: 1 #BBDEFB);
+                    border: 1px solid rgba(74, 144, 226, 0.3);
+                }
+            """)
+            item_widget.setFixedHeight(45)
+            
+            item_layout = QHBoxLayout(item_widget)
+            item_layout.setContentsMargins(10, 5, 10, 5)
+            
+            # 内容预览
+            preview = content[:35] + "..." if len(content) > 35 else content
+            content_label = QLabel(preview)
+            content_label.setStyleSheet("""
+                QLabel {
+                    color: #333;
+                    font-size: 11px;
+                    background: transparent;
+                }
+            """)
+            
+            # 类型图标
+            type_icon = "📝" if record_type == "text" else "📁"
+            type_label = QLabel(type_icon)
+            type_label.setStyleSheet("""
+                QLabel {
+                    font-size: 14px;
+                    background: transparent;
+                }
+            """)
+            
+            item_layout.addWidget(type_label)
+            item_layout.addWidget(content_label)
+            item_layout.addStretch()
+            
+            content_layout.addWidget(item_widget)
+            
+            # 绑定点击事件
+            item_widget.mousePressEvent = lambda e, rt=record_type, rid=record_id: self.copyRecordFromFloatPanel(rt, rid)
+        
+        # 主布局
+        main_layout = QVBoxLayout(self.float_panel)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(title_bar)
+        main_layout.addLayout(content_layout)
+        
+        # 设置面板位置（在悬浮图标旁边）
+        icon_pos = self.float_window.pos()
+        panel_x = icon_pos.x() - 210  # 在图标左侧，留出一些间隙
+        panel_y = icon_pos.y()
+        self.float_panel.move(panel_x, panel_y)
+        self.float_panel.setFixedSize(220, 35 + len(all_records) * 51)  # 标题栏+记录项高度
+        
+        # 绑定面板的鼠标事件
+        self.float_panel.enterEvent = self.onFloatPanelEnter
+        self.float_panel.leaveEvent = self.onFloatPanelLeave
+        
+        # 显示面板
+        self.float_panel.show()
+        
+    def onFloatPanelEnter(self, event):
+        """鼠标进入悬浮面板"""
+        # 如果有隐藏面板的定时器，取消它
+        if self.hide_panel_timer and self.hide_panel_timer.isActive():
+            self.hide_panel_timer.stop()
+        
+    def onFloatPanelLeave(self, event):
+        """鼠标离开悬浮面板"""
+        self.scheduleHideFloatPanel()
+        
+    def hideFloatPanel(self):
+        """隐藏悬浮面板"""
+        if self.float_panel:
+            self.float_panel.close()
+            self.float_panel = None
+        # 停止隐藏面板的定时器
+        if self.hide_panel_timer and self.hide_panel_timer.isActive():
+            self.hide_panel_timer.stop()
+        
+    def copyRecordFromFloatPanel(self, record_type, record_id):
+        """从悬浮面板复制记录"""
+        clipboard = QApplication.clipboard()
+        
+        if record_type == "text":
+            # 从数据库获取完整文本内容
+            conn = sqlite3.connect(self.db.db_path)
+            cursor = conn.cursor()
+            cursor.execute('SELECT content FROM text_records WHERE id = ?', (record_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                full_text = result[0]
+                clipboard.setText(full_text)
+        else:
+            # 对于文件类型，复制文件名
+            conn = sqlite3.connect(self.db.db_path)
+            cursor = conn.cursor()
+            cursor.execute('SELECT filename FROM file_records WHERE id = ?', (record_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                filename = result[0]
+                clipboard.setText(filename)
+                
+        # 隐藏面板
+        self.hideFloatPanel()
         
     def startMoveFloatIcon(self, event):
         """开始移动悬浮图标"""
