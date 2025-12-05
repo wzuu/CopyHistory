@@ -12,6 +12,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from clipboard_manager_main import ClipboardManager, monitor_clipboard_loop
+# 导入改进的事件驱动剪贴板监听器
+from improved_clipboard_monitor import monitor_clipboard_with_events, ClipboardMonitorWindow
 # 使用PySide6版本的GUI
 from clipboard_pyside_gui import main as gui_main
 import win32gui
@@ -52,10 +54,14 @@ def main():
     # 创建剪贴板管理器
     manager = ClipboardManager()
     
-    # 在单独线程中运行剪贴板监控
-    monitor_thread = threading.Thread(target=monitor_clipboard_loop, args=(manager, 1), daemon=True)
+    # 使用事件驱动方式监听剪贴板变化（替代轮询方式）
+    monitor_thread = threading.Thread(
+        target=monitor_clipboard_with_events, 
+        args=(manager,), 
+        daemon=True
+    )
     monitor_thread.start()
-    print("📋 剪贴板监控已在后台启动")
+    print("📋 剪贴板监控已在后台启动 (事件驱动模式)")
     
     # 运行PySide6 GUI应用
     print("🖥️  剪贴板管理器已在系统托盘运行")
