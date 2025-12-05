@@ -608,7 +608,7 @@ class SettingsTab(QWidget):
             else:
                 self.text_only_radio.setChecked(True)
         else:
-            self.all_types_radio.setChecked(True)
+            self.text_only_radio.setChecked(True)
             
         # 更新控件状态
         self.onUnlimitedChanged()
@@ -689,10 +689,10 @@ class SettingsTab(QWidget):
             max_copy_count=100,
             unlimited_mode=False,
             retention_days=30,  # 默认30天
-            auto_start=False,
-            float_icon=False,
+            auto_start=True,    # 默认允许开机自启
+            float_icon=True,    # 默认启用悬浮图标
             opacity=15,  # 默认透明度15%
-            clipboard_type='all'  # 默认记录所有类型
+            clipboard_type='text_only'  # 默认仅记录文本类型
         )
         
         # 更新界面显示
