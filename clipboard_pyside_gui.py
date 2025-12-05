@@ -688,7 +688,7 @@ class SettingsTab(QWidget):
             max_copy_size=314572800,  # 300MB
             max_copy_count=100,
             unlimited_mode=False,
-            retention_days=0,  # 永久保存
+            retention_days=30,  # 默认30天
             auto_start=False,
             float_icon=False,
             opacity=15,  # 默认透明度15%
