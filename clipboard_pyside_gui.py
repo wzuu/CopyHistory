@@ -766,6 +766,9 @@ class ClipboardManagerGUI(QMainWindow):
         layout = QVBoxLayout(central_widget)
         layout.addWidget(self.tab_widget)
         
+        # 设置窗口关闭事件
+        self.setAttribute(Qt.WA_DeleteOnClose, False)  # 防止窗口关闭时删除对象
+        
     def setupSystemTray(self):
         """设置系统托盘"""
         if QSystemTrayIcon.isSystemTrayAvailable():
@@ -956,19 +959,14 @@ class ClipboardManagerGUI(QMainWindow):
         # 销毁已存在的面板
         self.hideFloatPanel()
         
-        # 获取最近5条记录
+        # 只获取最近5条文本记录（过滤掉文件记录）
         text_records = self.db.get_text_records(5)
-        file_records = self.db.get_file_records(5)
         
-        # 合并记录并按时间排序
+        # 构建记录列表（只包含文本记录）
         all_records = []
         for record in text_records:
             # 类型, 内容, 时间, ID
             all_records.append(("text", record[1], record[2], record[0]))
-            
-        for record in file_records:
-            # 类型, 文件名, 时间, ID
-            all_records.append(("file", record[3], record[7], record[0]))
             
         # 按时间排序(最新的在前面)
         all_records.sort(key=lambda x: x[2], reverse=True)
@@ -1061,9 +1059,8 @@ class ClipboardManagerGUI(QMainWindow):
                 }
             """)
             
-            # 类型图标
-            type_icon = "📝" if record_type == "text" else "📁"
-            type_label = QLabel(type_icon)
+            # 类型图标（现在都是文本类型）
+            type_label = QLabel("📝")
             type_label.setStyleSheet("""
                 QLabel {
                     font-size: 14px;
@@ -1078,7 +1075,10 @@ class ClipboardManagerGUI(QMainWindow):
             content_layout.addWidget(item_widget)
             
             # 绑定点击事件
-            item_widget.mousePressEvent = lambda e, rt=record_type, rid=record_id: self.copyRecordFromFloatPanel(rt, rid)
+            def make_click_handler(rt, rid, tl):
+                return lambda e: self.copyRecordFromFloatPanel(rt, rid, tl)
+            
+            item_widget.mousePressEvent = make_click_handler(record_type, record_id, type_label)
         
         # 主内容布局
         main_layout = QVBoxLayout(self.float_panel)
@@ -1094,8 +1094,8 @@ class ClipboardManagerGUI(QMainWindow):
         
         # 设置面板位置（在悬浮图标旁边）
         icon_pos = self.float_window.pos()
-        panel_x = icon_pos.x() - 260  # 在图标左侧，留出一些间隙，增加面板宽度
-        panel_y = icon_pos.y()
+        panel_x = icon_pos.x() - 270  # 向左移动更多（从260增加到270）
+        panel_y = icon_pos.y() + 20   # 向下移动（从y坐标增加20像素）
         self.panel_container.move(panel_x, panel_y)
         self.panel_container.setFixedSize(270, 32 + len(all_records) * 44)  # 调整尺寸：更宽更矮
         
@@ -1125,7 +1125,7 @@ class ClipboardManagerGUI(QMainWindow):
         if self.hide_panel_timer and self.hide_panel_timer.isActive():
             self.hide_panel_timer.stop()
         
-    def copyRecordFromFloatPanel(self, record_type, record_id):
+    def copyRecordFromFloatPanel(self, record_type, record_id, type_label):
         """从悬浮面板复制记录"""
         clipboard = QApplication.clipboard()
         
@@ -1140,6 +1140,16 @@ class ClipboardManagerGUI(QMainWindow):
             if result:
                 full_text = result[0]
                 clipboard.setText(full_text)
+                
+                # 更新图标为绿色对号
+                type_label.setText("✓")
+                type_label.setStyleSheet("""
+                    QLabel {
+                        font-size: 14px;
+                        color: green;
+                        background: transparent;
+                    }
+                """)
         else:
             # 对于文件类型，复制文件名
             conn = sqlite3.connect(self.db.db_path)
@@ -1152,8 +1162,18 @@ class ClipboardManagerGUI(QMainWindow):
                 filename = result[0]
                 clipboard.setText(filename)
                 
-        # 隐藏面板
-        self.hideFloatPanel()
+                # 更新图标为绿色对号
+                type_label.setText("✓")
+                type_label.setStyleSheet("""
+                    QLabel {
+                        font-size: 14px;
+                        color: green;
+                        background: transparent;
+                    }
+                """)
+                
+        # 阻止事件传播，避免触发其他操作
+        return True
         
     def startMoveFloatIcon(self, event):
         """开始移动悬浮图标"""
@@ -1283,7 +1303,16 @@ class ClipboardManagerGUI(QMainWindow):
         self.update_timer.stop()
         if self.tray_icon:
             self.tray_icon.hide()
+        if self.float_window:
+            self.float_window.close()
         QApplication.quit()
+        
+    def closeEvent(self, event):
+        """处理窗口关闭事件"""
+        # 隐藏窗口而不是退出程序
+        self.hide()
+        self.is_hidden = True
+        event.ignore()  # 忽略关闭事件，防止程序退出
 
 
 def main():
