@@ -1276,6 +1276,20 @@ class ClipboardManagerGUI(QMainWindow):
                 
     def updateRecords(self):
         """更新记录显示"""
+        # 检查鼠标是否在表格上
+        if self.records_tab.tree_view.underMouse():
+            # 如果鼠标在表格上，稍后再更新
+            QTimer.singleShot(1000, self.updateRecords)
+            return
+            
+        # 检查是否有项目被选中
+        selection_model = self.records_tab.tree_view.selectionModel()
+        if selection_model and selection_model.hasSelection():
+            # 如果有选中项，稍后再更新
+            QTimer.singleShot(1000, self.updateRecords)
+            return
+            
+        # 更新数据
         self.records_tab.loadData()
         
     def onSettingsChanged(self):
