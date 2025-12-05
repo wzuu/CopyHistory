@@ -718,14 +718,21 @@ class ClipboardManagerGUI(QMainWindow):
                 background: white;
                 alternate-background-color: #f9f9f9;
                 border: 1px solid #ccc;
+                outline: 0px;
+            }
+            QTreeView::item {
+                border: none;
+                outline: 0px;
             }
             QTreeView::item:hover {
                 background: #3498db;
                 color: white;
             }
             QTreeView::item:selected {
-                background: #1e3a5f;
+                background: #3498db;
                 color: white;
+                border: none;
+                outline: 0px;
             }
             QScrollBar:vertical {
                 background: #f0f0f0;
