@@ -862,30 +862,34 @@ class ClipboardManagerGUI(QMainWindow):
         alpha = opacity / 100.0
         
         # 创建悬浮窗口
-        from PySide6.QtWidgets import QLabel
+        from PySide6.QtWidgets import QLabel, QWidget
         from PySide6.QtCore import Qt
-        self.float_window = QLabel()
+        self.float_window = QWidget()
         self.float_window.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.float_window.setAttribute(Qt.WA_TranslucentBackground)
-        self.float_window.setFixedSize(50, 50)
+        self.float_window.setFixedSize(60, 60)  # 稍大一些的窗口容纳背景
         
-        # 设置圆形蓝色背景样式（使用更深更鲜明的颜色）
-        self.float_window.setStyleSheet(f"""
-            background-color: rgba(30, 144, 255, {alpha});  /* 道奇蓝 (Dodger Blue) */
-            border: 2px solid rgba(0, 191, 255, {alpha});   /* 深天蓝 (Deep Sky Blue) */
+        # 设置背景样式（在窗口上添加一个背景层）
+        self.background_label = QLabel(self.float_window)
+        self.background_label.setGeometry(5, 5, 50, 50)  # 稍微偏移，创造一种浮动感
+        self.background_label.setStyleSheet(f"""
+            background-color: rgba(30, 144, 255, {alpha * 0.7});  /* 道奇蓝，稍微透明一些 */
+            border: 1px solid rgba(0, 191, 255, {alpha});
             border-radius: 25px;
         """)
         
-        # 在中心放置"C"字母
-        label = QLabel("C", self.float_window)
-        label.setStyleSheet("""
+        # 设置圆形主图标
+        self.icon_label = QLabel("C", self.float_window)
+        self.icon_label.setGeometry(5, 5, 50, 50)
+        self.icon_label.setStyleSheet(f"""
+            background-color: rgba(30, 144, 255, {alpha});  /* 道奇蓝 */
+            border: 2px solid rgba(0, 191, 255, {alpha});   /* 深天蓝 */
+            border-radius: 25px;
             color: white;
             font-size: 24px;
             font-weight: bold;
-            background-color: transparent;
         """)
-        label.setAlignment(Qt.AlignCenter)
-        label.setGeometry(0, 0, 50, 50)
+        self.icon_label.setAlignment(Qt.AlignCenter)
         
         # 获取屏幕尺寸
         screens = QApplication.screens()
@@ -899,11 +903,11 @@ class ClipboardManagerGUI(QMainWindow):
             screen_height = 1080
         
         # 设置默认位置为右上角(距离右边60像素, 距离顶部120像素)
-        x = screen_width - 50 - 60  # 距离右边60像素
+        x = screen_width - 60 - 60  # 距离右边60像素
         y = 120  # 距离顶部120像素
         self.float_window.move(x, y)
         
-        # 绑定鼠标事件
+        # 绑定鼠标事件到整个窗口
         self.float_window.mousePressEvent = self.startMoveFloatIcon
         self.float_window.mouseMoveEvent = self.moveFloatIcon
         self.float_window.mouseReleaseEvent = self.handleFloatIconClick
