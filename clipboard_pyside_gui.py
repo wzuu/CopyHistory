@@ -237,8 +237,107 @@ class RecordsTab(QWidget):
         
     def onSearchTextChanged(self, text):
         """搜索文本改变事件"""
-        # TODO: 实现搜索功能
-        pass
+        # 实现搜索功能
+        if not hasattr(self, '_search_timer'):
+            self._search_timer = QTimer()
+            self._search_timer.setSingleShot(True)
+            self._search_timer.timeout.connect(self._performSearch)
+        
+        # 停止之前的定时器
+        self._search_timer.stop()
+        
+        # 保存当前的搜索文本
+        self._current_search_text = text
+        
+        if text.strip():
+            # 延迟执行搜索，避免频繁触发
+            self._search_timer.start(300)
+        else:
+            # 如果搜索文本为空，则显示所有记录
+            self.loadData()
+            # 通知主窗口我们不再处于搜索状态
+            if hasattr(self.window(), 'update_timer'):
+                self.window().update_timer.start()
+        
+    def _performSearch(self):
+        """执行实际的搜索操作"""
+        # 使用保存的搜索文本
+        search_text = getattr(self, '_current_search_text', '')
+        if not search_text.strip():
+            # 如果搜索文本为空，加载所有数据
+            self.loadData()
+            return
+            
+        # 清空现有记录
+        self.model.beginResetModel()
+        self.model.records = []
+        
+        # 获取文本记录并筛选
+        text_records = self.db.get_text_records()
+        for record in text_records:
+            # 记录格式:(id, content, timestamp, char_count, md5_hash, number)
+            record_id, content, timestamp, char_count, md5_hash, number = record
+            # 检查搜索条件
+            if search_text.lower() in content.lower():
+                content_preview = self.model.sanitizeText(content, 50)
+                self.model.records.append({
+                    'name_or_content': content_preview,    # 名称或内容
+                    'type': '文本',                        # 类型
+                    'size': '-',                          # 大小
+                    'timestamp': timestamp,               # 时间
+                    'id': record_id,
+                    'record_type': 'text'
+                })
+        
+        # 获取文件记录并筛选
+        file_records = self.db.get_file_records()
+        for record in file_records:
+            # 记录格式:(id, original_path, saved_path, filename, file_size, file_type, md5_hash, timestamp, number)
+            record_id, original_path, saved_path, filename, file_size, file_type, md5_hash, timestamp, number = record
+            # 检查搜索条件
+            if (search_text.lower() in filename.lower() or 
+                search_text.lower() in original_path.lower()):
+                size_str = format_file_size(file_size)
+                file_extension = file_type if file_type else "未知"
+                self.model.records.append({
+                    'name_or_content': filename,          # 名称或内容
+                    'type': file_extension,               # 类型
+                    'size': size_str,                     # 大小
+                    'timestamp': timestamp,               # 时间
+                    'id': record_id,
+                    'record_type': 'file'
+                })
+        
+        # 排序
+        headers_map = {
+            "名称或内容": "name_or_content",
+            "类型": "type", 
+            "大小": "size",
+            "时间": "timestamp"
+        }
+        
+        sort_key_name = headers_map.get(self.sort_column, "timestamp")  # 默认按时间排序
+        
+        def sort_key(record):
+            if self.sort_column == "大小":
+                # 特殊处理大小排序
+                size_str = record['size']
+                if size_str == "-":
+                    return 0
+                if "GB" in size_str:
+                    return float(size_str.replace("GB", "")) * 1024 * 1024 * 1024
+                elif "MB" in size_str:
+                    return float(size_str.replace("MB", "")) * 1024 * 1024
+                elif "KB" in size_str:
+                    return float(size_str.replace("KB", "")) * 1024
+                else:
+                    return float(size_str.replace("B", ""))
+            else:
+                return record[sort_key_name]
+        
+        self.model.records.sort(key=sort_key, reverse=self.sort_reverse)
+        self.model.endResetModel()
+        self.updateStatistics()
         
     def onRecordDoubleClicked(self, index):
         """记录双击事件"""
@@ -1276,6 +1375,11 @@ class ClipboardManagerGUI(QMainWindow):
                 
     def updateRecords(self):
         """更新记录显示"""
+        # 检查是否正在进行搜索，如果正在搜索则不更新
+        if hasattr(self.records_tab, '_search_timer') and self.records_tab._search_timer.isActive():
+            QTimer.singleShot(1000, self.updateRecords)
+            return
+            
         # 检查鼠标是否在表格上
         if self.records_tab.tree_view.underMouse():
             # 如果鼠标在表格上，稍后再更新
@@ -1286,6 +1390,12 @@ class ClipboardManagerGUI(QMainWindow):
         selection_model = self.records_tab.tree_view.selectionModel()
         if selection_model and selection_model.hasSelection():
             # 如果有选中项，稍后再更新
+            QTimer.singleShot(1000, self.updateRecords)
+            return
+            
+        # 检查搜索框是否有内容
+        if self.records_tab.search_edit.text().strip():
+            # 如果搜索框有内容，不自动更新
             QTimer.singleShot(1000, self.updateRecords)
             return
             
