@@ -209,6 +209,9 @@ class RecordsTab(QWidget):
         header.setSectionResizeMode(2, QHeaderView.Fixed)    # 大小列固定宽度
         header.setSectionResizeMode(3, QHeaderView.Fixed)    # 时间列固定宽度
         
+        # 连接表头点击事件到排序方法
+        header.sectionClicked.connect(self.sortByColumn)
+        
         # 设置固定列的具体宽度（基于800px窗口宽度的大致百分比）
         self.tree_view.setColumnWidth(0, 450)  # 名称或内容列
         self.tree_view.setColumnWidth(1, 80)   # 类型列
@@ -347,7 +350,7 @@ class RecordsTab(QWidget):
         
     def sortByColumn(self, column):
         """根据列排序"""
-        headers = ["名称或内容", "类型", "大小", "时间"]  # 更新了列标题列表
+        headers = ["名称或内容", "类型", "大小", "时间"]
         if column < len(headers):
             column_name = headers[column]
             if self.sort_column == column_name:
@@ -355,7 +358,39 @@ class RecordsTab(QWidget):
             else:
                 self.sort_column = column_name
                 self.sort_reverse = True
-            self.loadData()
+            
+            # 直接对当前模型中的数据进行排序，而不是重新加载
+            self.model.beginResetModel()
+            
+            # 排序
+            headers_map = {
+                "名称或内容": "name_or_content",
+                "类型": "type", 
+                "大小": "size",
+                "时间": "timestamp"
+            }
+            
+            sort_key_name = headers_map.get(self.sort_column, "timestamp")  # 默认按时间排序
+            
+            def sort_key(record):
+                if self.sort_column == "大小":
+                    # 特殊处理大小排序
+                    size_str = record['size']
+                    if size_str == "-":
+                        return 0
+                    if "GB" in size_str:
+                        return float(size_str.replace("GB", "")) * 1024 * 1024 * 1024
+                    elif "MB" in size_str:
+                        return float(size_str.replace("MB", "")) * 1024 * 1024
+                    elif "KB" in size_str:
+                        return float(size_str.replace("KB", "")) * 1024
+                    else:
+                        return float(size_str.replace("B", ""))
+                else:
+                    return record[sort_key_name]
+            
+            self.model.records.sort(key=sort_key, reverse=self.sort_reverse)
+            self.model.endResetModel()
 
 
 class SettingsTab(QWidget):
