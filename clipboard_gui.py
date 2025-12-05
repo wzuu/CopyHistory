@@ -51,7 +51,7 @@ class ClipboardGUI:
         self.root.title("剪贴板历史记录")
         self.root.geometry("750x500")
         self.root.minsize(700, 400)  # 设置最小尺寸
-
+        
         # 设置窗口图标
         try:
             icon_path = resource_path("mini.ico")
@@ -240,90 +240,99 @@ class ClipboardGUI:
         # 配置整体主题
         style.theme_use('clam')
         
-        # 主框架样式
+        # 主框架样式 - 使用浅灰色背景
         style.configure('Main.TFrame', background='#f0f0f0')
         
         # 笔记本控件样式
         style.configure('Main.TNotebook', background='#f0f0f0', tabmargins=[0, 0, 0, 0])
         style.configure('Main.TNotebook.Tab', 
-                        padding=[15, 5], 
+                        padding=[15, 8], 
                         font=('Segoe UI', 10, 'bold'),
-                        background='#e0e0e0',
-                        foreground='#333333')
+                        background='#e1e1e1',
+                        foreground='#333333',
+                        borderwidth=0)
         style.map('Main.TNotebook.Tab',
                   background=[('selected', '#ffffff')],
                   foreground=[('selected', '#000000')])
         
-        # 标签页框架样式
+        # 标签页框架样式 - 使用白色背景
         style.configure('Tab.TFrame', background='#ffffff')
         
         # 搜索框样式
         style.configure('Search.TEntry', 
-                        padding=5,
+                        padding=8,
                         fieldbackground='#ffffff',
-                        borderwidth=1)
+                        borderwidth=1,
+                        relief='solid')
         
         # 树状视图样式
         style.configure('Records.Treeview',
                         background='#ffffff',
                         foreground='#333333',
-                        rowheight=25,
+                        rowheight=30,
                         fieldbackground='#ffffff',
-                        borderwidth=0)
+                        borderwidth=1,
+                        relief='solid')
         style.configure('Records.Treeview.Heading',
                         font=('Segoe UI', 9, 'bold'),
                         background='#f5f5f5',
                         foreground='#000000',
-                        padding=5)
+                        padding=10)
         style.map('Records.Treeview.Heading',
                   background=[('active', '#e0e0e0')])
         
         # 滚动条样式
         style.configure('Vertical.TScrollbar',
                         gripcount=0,
-                        background='#e0e0e0',
+                        background='#c0c0c0',
                         troughcolor='#f0f0f0',
-                        borderwidth=0)
+                        borderwidth=0,
+                        relief='flat')
         style.map('Vertical.TScrollbar',
-                  background=[('active', '#d0d0d0'), ('pressed', '#c0c0c0')])
+                  background=[('active', '#a0a0a0'), ('pressed', '#808080')])
         
         # 状态标签样式
         style.configure('Status.TLabel',
                         background='#ffffff',
                         foreground='#666666',
                         font=('Segoe UI', 9),
-                        padding=[5, 5])
+                        padding=[10, 10])
         
         # 设置页面标题样式
         style.configure('SettingsTitle.TLabel',
-                        font=('Segoe UI', 14, 'bold'),
+                        font=('Segoe UI', 16, 'bold'),
                         foreground='#2c3e50',
-                        padding=[0, 10])
+                        padding=[0, 15],
+                        background='#ffffff')
         
         # 设置页面组标题样式
         style.configure('SettingsGroup.TLabel',
-                        font=('Segoe UI', 11, 'bold'),
+                        font=('Segoe UI', 12, 'bold'),
                         foreground='#3498db',
-                        padding=[0, 10])
+                        padding=[0, 15],
+                        background='#ffffff')
         
         # 设置页面选项样式
         style.configure('SettingsOption.TCheckbutton',
                         background='#ffffff',
                         foreground='#333333',
-                        font=('Segoe UI', 9))
+                        font=('Segoe UI', 10),
+                        padding=[5, 5])
         style.configure('SettingsOption.TRadiobutton',
                         background='#ffffff',
                         foreground='#333333',
-                        font=('Segoe UI', 9))
+                        font=('Segoe UI', 10),
+                        padding=[5, 5])
         style.configure('SettingsOption.TLabel',
                         background='#ffffff',
                         foreground='#333333',
-                        font=('Segoe UI', 9))
+                        font=('Segoe UI', 10))
         
         # 设置页面输入框样式
         style.configure('Settings.TEntry',
-                        padding=3,
-                        fieldbackground='#ffffff')
+                        padding=5,
+                        fieldbackground='#ffffff',
+                        relief='solid')
 
     def switch_to_records_tab(self, event=None):
         """切换到记录标签页"""
@@ -335,8 +344,6 @@ class ClipboardGUI:
 
     def setup_records_tab(self):
         """设置记录标签页"""
-        # 移除分页参数
-
         # 初始化排序参数
         self.sort_column = "时间"  # 默认排序列
         self.sort_reverse = True   # 默认倒序(最新的在前面)
@@ -348,17 +355,25 @@ class ClipboardGUI:
         self.records_frame.rowconfigure(2, weight=0)  # 状态标签行不扩展
 
         # 创建搜索输入框，与记录列表宽度一致
-        self.search_entry = ttk.Entry(self.records_frame)
-        self.search_entry.grid(row=0, column=0, sticky=(
-            tk.W, tk.E), pady=2, padx=(5, 0))
-
+        search_frame = ttk.Frame(self.records_frame, style='Tab.TFrame')
+        search_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=10, padx=15)
+        
+        ttk.Label(search_frame, text="🔍", style='SettingsOption.TLabel').pack(side=tk.LEFT, padx=(0, 8))
+        self.search_entry = ttk.Entry(search_frame, style='Search.TEntry', width=30)
+        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
         # 绑定实时搜索事件
         self.search_entry.bind('<KeyRelease>', self.on_search_input)
 
         # 创建树形视图,显示记录名称或内容、类型、大小、时间、次数
+        tree_frame = ttk.Frame(self.records_frame, style='Tab.TFrame')
+        tree_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=15, pady=(0, 10))
+        tree_frame.columnconfigure(0, weight=1)
+        tree_frame.rowconfigure(0, weight=1)
+        
         columns = ("名称或内容", "类型", "大小", "时间", "次数")
         self.records_tree = ttk.Treeview(
-            self.records_frame, columns=columns, show="headings", height=15)
+            tree_frame, columns=columns, show="headings", height=15, style='Records.Treeview')
 
         # 设置列标题和点击事件
         for col in columns:
@@ -378,19 +393,16 @@ class ClipboardGUI:
 
         # 添加垂直滚动条,取消横向滚动条
         records_scrollbar_y = ttk.Scrollbar(
-            self.records_frame, orient=tk.VERTICAL, command=self.records_tree.yview)
+            tree_frame, orient=tk.VERTICAL, command=self.records_tree.yview, style='Vertical.TScrollbar')
         self.records_tree.configure(yscrollcommand=records_scrollbar_y.set)
 
         # 布局
-        self.records_tree.grid(row=1, column=0, sticky=(
-            tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=2)
-        records_scrollbar_y.grid(row=1, column=1, sticky=(
-            tk.N, tk.S), padx=(0, 5), pady=2)
+        self.records_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        records_scrollbar_y.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
         # 添加提示信息标签
-        self.status_label = ttk.Label(self.records_frame, text="0条记录，累计大小0B")
-        self.status_label.grid(row=2, column=0, columnspan=2, sticky=(
-            tk.W, tk.E), padx=5, pady=(2, 5))
+        self.status_label = ttk.Label(self.records_frame, text="0条记录，累计大小0B", style='Status.TLabel')
+        self.status_label.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), padx=15, pady=(0, 15))
 
         # 添加双击事件复制内容到剪贴板
         self.records_tree.bind("<Double-1>", self.copy_record_on_double_click)
@@ -438,11 +450,24 @@ class ClipboardGUI:
 
     def setup_settings_tab(self):
         """设置标签页 - 简洁行布局,支持滚动"""
+        # 创建外部容器框架
+        container = tk.Frame(self.settings_frame, bg='#ffffff')
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 创建内部带阴影效果的框架
+        inner_frame = tk.Frame(container, bg='#ffffff', relief='solid', bd=1)
+        inner_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 添加顶部装饰条
+        top_bar = tk.Frame(inner_frame, bg='#3498db', height=4)
+        top_bar.pack(fill=tk.X)
+        top_bar.pack_propagate(False)
+        
         # 创建画布和滚动条以支持滚动，去除边框
-        canvas = tk.Canvas(self.settings_frame, highlightthickness=0, bd=0)
+        canvas = tk.Canvas(inner_frame, highlightthickness=0, bd=0, bg='#ffffff')
         scrollbar = tk.Scrollbar(
-            self.settings_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, relief="flat", bd=0)
+            inner_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, relief="flat", bd=0, bg='#ffffff')
 
         # 配置滚动区域
         scrollable_frame.bind(
@@ -457,7 +482,7 @@ class ClipboardGUI:
 
         # 绑定鼠标滚轮事件，使整个画布区域都支持滚动
         def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/100)), "units")
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
@@ -466,138 +491,167 @@ class ClipboardGUI:
         def _on_closing():
             canvas.unbind_all("<MouseWheel>")
 
-        # 打包画布和滚动条，增加内边距
-        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-        scrollbar.pack(side="right", fill="y", pady=10)
+        # 打包画布和滚动条
+        canvas.pack(side="left", fill="both", expand=True, padx=1, pady=1)
+        scrollbar.pack(side="right", fill="y", padx=1, pady=1)
+
+        # 标题区域
+        title_frame = tk.Frame(scrollable_frame, bg='#ffffff')
+        title_frame.pack(fill=tk.X, pady=(20, 10), padx=20)
+        ttk.Label(title_frame, text="⚙️ 剪贴板管理器设置", style='SettingsTitle.TLabel').pack(side=tk.LEFT)
+
+        # 分隔线
+        separator = tk.Frame(scrollable_frame, height=1, bg='#e0e0e0')
+        separator.pack(fill=tk.X, padx=20, pady=10)
 
         # 复制限制设置
-        tk.Label(scrollable_frame, text="复制限制设置", font=(
-            "Arial", 12, "bold")).pack(anchor=tk.W, pady=(5, 10), padx=5)
+        limit_frame = tk.Frame(scrollable_frame, bg='#ffffff')
+        limit_frame.pack(fill=tk.X, pady=5, padx=20)
+        ttk.Label(limit_frame, text="📋 复制限制设置", style='SettingsGroup.TLabel').pack(anchor=tk.W)
 
         # 无限模式复选框
         self.unlimited_var = tk.BooleanVar()
-        unlimited_check = tk.Checkbutton(
-            scrollable_frame, text="无限模式(无限制)", variable=self.unlimited_var, bd=0, highlightthickness=0)
-        unlimited_check.pack(anchor=tk.W, pady=5, padx=10)
+        unlimited_check = ttk.Checkbutton(
+            limit_frame, text="无限模式(无限制)", variable=self.unlimited_var, style='SettingsOption.TCheckbutton')
+        unlimited_check.pack(anchor=tk.W, pady=5)
 
         # 最大大小和数量设置
-        tk.Label(scrollable_frame, text="最大复制大小和数量").pack(
-            anchor=tk.W, pady=(10, 5), padx=5)
-        size_count_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
-        size_count_frame.pack(fill=tk.X, pady=5, padx=10)
+        size_count_container = tk.Frame(limit_frame, bg='#ffffff')
+        size_count_container.pack(fill=tk.X, pady=10)
+        
+        tk.Label(size_count_container, text="📏 最大复制大小和数量", bg='#ffffff', font=("Segoe UI", 10, 'bold')).pack(
+            anchor=tk.W, pady=(0, 10))
+            
+        size_count_frame = tk.Frame(size_count_container, relief="flat", bd=0, bg='#ffffff')
+        size_count_frame.pack(fill=tk.X, pady=5)
 
         # 最大大小设置
-        tk.Label(size_count_frame, text="大小:").pack(side=tk.LEFT, padx=(0, 5))
+        size_frame = tk.Frame(size_count_frame, bg='#ffffff')
+        size_frame.pack(side=tk.LEFT, padx=(0, 20))
+        tk.Label(size_frame, text="💾 大小:", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(0, 5))
         self.size_var = tk.StringVar()
-        size_entry = tk.Entry(
-            size_count_frame, textvariable=self.size_var, width=10, relief="solid", bd=1)
+        size_entry = ttk.Entry(
+            size_frame, textvariable=self.size_var, width=10, style='Settings.TEntry')
         size_entry.pack(side=tk.LEFT, padx=(0, 5))
-        tk.Label(size_count_frame, text="MB").pack(side=tk.LEFT, padx=(0, 5))
-
-        # 添加一些间距
-        tk.Frame(size_count_frame, width=20,
-                 relief="flat", bd=0).pack(side=tk.LEFT)
+        tk.Label(size_frame, text="MB", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(0, 5))
 
         # 最大数量设置
-        tk.Label(size_count_frame, text="数量:").pack(side=tk.LEFT, padx=(0, 5))
+        count_frame = tk.Frame(size_count_frame, bg='#ffffff')
+        count_frame.pack(side=tk.LEFT)
+        tk.Label(count_frame, text="🔢 数量:", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(0, 5))
         self.count_var = tk.StringVar()
-        count_entry = tk.Entry(
-            size_count_frame, textvariable=self.count_var, width=10, relief="solid", bd=1)
+        count_entry = ttk.Entry(
+            count_frame, textvariable=self.count_var, width=10, style='Settings.TEntry')
         count_entry.pack(side=tk.LEFT, padx=(0, 5))
-        tk.Label(size_count_frame, text="个").pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(count_frame, text="个", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(0, 5))
 
         # 保存天数设置
-        tk.Label(scrollable_frame, text="记录保存设置", font=("Arial", 12, "bold")).pack(
-            anchor=tk.W, pady=(15, 10), padx=5)
+        retention_frame = tk.Frame(scrollable_frame, bg='#ffffff')
+        retention_frame.pack(fill=tk.X, pady=5, padx=20)
+        ttk.Label(retention_frame, text="💾 记录保存设置", style='SettingsGroup.TLabel').pack(
+            anchor=tk.W, pady=(10, 0))
 
         # 永久保存选项
         self.retention_var = tk.StringVar()
-        permanent_radio = tk.Radiobutton(
-            scrollable_frame, text="永久保存", variable=self.retention_var, value="permanent", bd=0, highlightthickness=0)
-        permanent_radio.pack(anchor=tk.W, pady=5, padx=10)
+        permanent_radio = ttk.Radiobutton(
+            retention_frame, text="♾️ 永久保存", variable=self.retention_var, value="permanent", style='SettingsOption.TRadiobutton')
+        permanent_radio.pack(anchor=tk.W, pady=8)
 
         # 自定义天数选项
-        custom_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
-        custom_frame.pack(fill=tk.X, pady=5, padx=10)
+        custom_frame = tk.Frame(retention_frame, relief="flat", bd=0, bg='#ffffff')
+        custom_frame.pack(fill=tk.X, pady=5)
 
-
-        custom_radio = tk.Radiobutton(
-            custom_frame, text="自定义天数:", variable=self.retention_var, value="custom", bd=0, highlightthickness=0)
+        custom_radio = ttk.Radiobutton(
+            custom_frame, text="📆 自定义天数:", variable=self.retention_var, value="custom", style='SettingsOption.TRadiobutton')
         custom_radio.pack(side=tk.LEFT)
 
         self.days_var = tk.StringVar()
-        self.days_entry = tk.Entry(
-            custom_frame, textvariable=self.days_var, width=10, relief="solid", bd=1)
+        self.days_entry = ttk.Entry(
+            custom_frame, textvariable=self.days_var, width=10, style='Settings.TEntry')
         self.days_entry.pack(side=tk.LEFT, padx=(10, 5))
-        tk.Label(custom_frame, text="天").pack(side=tk.LEFT, padx=(5, 0))
+        tk.Label(custom_frame, text="天", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(5, 0))
 
         # 系统设置
-        tk.Label(scrollable_frame, text="系统设置", font=("Arial", 12, "bold")).pack(
-            anchor=tk.W, pady=(15, 10), padx=5)
+        system_frame = tk.Frame(scrollable_frame, bg='#ffffff')
+        system_frame.pack(fill=tk.X, pady=5, padx=20)
+        ttk.Label(system_frame, text="🖥️ 系统设置", style='SettingsGroup.TLabel').pack(
+            anchor=tk.W, pady=(10, 0))
 
         # 剪贴板类型保存机制
-        tk.Label(scrollable_frame, text="剪贴板记录类型").pack(
-            anchor=tk.W, pady=(10, 5), padx=5)
+        type_frame = tk.Frame(system_frame, bg='#ffffff')
+        type_frame.pack(fill=tk.X, pady=5)
+        tk.Label(type_frame, text="📄 剪贴板记录类型", bg='#ffffff', font=("Segoe UI", 10, 'bold')).pack(
+            anchor=tk.W, pady=(0, 8))
 
         self.clipboard_type_var = tk.StringVar(value="all")
-        all_types_radio = tk.Radiobutton(scrollable_frame, text="记录所有类型（文本和文件）",
-                                         variable=self.clipboard_type_var, value="all", bd=0, highlightthickness=0)
-        all_types_radio.pack(anchor=tk.W, pady=2, padx=10)
+        all_types_radio = ttk.Radiobutton(type_frame, text="📝 记录所有类型（文本和文件）",
+                                         variable=self.clipboard_type_var, value="all", style='SettingsOption.TRadiobutton')
+        all_types_radio.pack(anchor=tk.W, pady=3)
 
-        text_only_radio = tk.Radiobutton(
-            scrollable_frame, text="仅记录纯文本", variable=self.clipboard_type_var, value="text_only", bd=0, highlightthickness=0)
-        text_only_radio.pack(anchor=tk.W, pady=2, padx=10)
+        text_only_radio = ttk.Radiobutton(
+            type_frame, text="🔤 仅记录纯文本", variable=self.clipboard_type_var, value="text_only", style='SettingsOption.TRadiobutton')
+        text_only_radio.pack(anchor=tk.W, pady=3)
 
         # 开机自启设置
         self.autostart_var = tk.BooleanVar()
-        autostart_check = tk.Checkbutton(
-            scrollable_frame, text="允许程序开机自启", variable=self.autostart_var, bd=0, highlightthickness=0)
-        autostart_check.pack(anchor=tk.W, pady=5, padx=10)
+        autostart_check = ttk.Checkbutton(
+            system_frame, text="🚀 允许程序开机自启", variable=self.autostart_var, style='SettingsOption.TCheckbutton')
+        autostart_check.pack(anchor=tk.W, pady=8)
 
         # 悬浮图标设置
         self.float_icon_var = tk.BooleanVar()
-        float_icon_check = tk.Checkbutton(
-            scrollable_frame, text="启用悬浮图标", variable=self.float_icon_var, bd=0, highlightthickness=0)
-        float_icon_check.pack(anchor=tk.W, pady=5, padx=10)
+        float_icon_check = ttk.Checkbutton(
+            system_frame, text="📍 启用悬浮图标", variable=self.float_icon_var, style='SettingsOption.TCheckbutton')
+        float_icon_check.pack(anchor=tk.W, pady=3)
 
         # 悬浮图标透明度设置
-        tk.Label(scrollable_frame, text="悬浮图标透明度").pack(
-            anchor=tk.W, pady=(10, 5), padx=5)
-        opacity_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
-        opacity_frame.pack(fill=tk.X, pady=5, padx=10)
+        opacity_frame_container = tk.Frame(system_frame, bg='#ffffff')
+        opacity_frame_container.pack(fill=tk.X, pady=5)
+        tk.Label(opacity_frame_container, text="👁️ 悬浮图标透明度", bg='#ffffff', font=("Segoe UI", 10, 'bold')).pack(
+            anchor=tk.W, pady=(0, 8))
+        opacity_frame = tk.Frame(opacity_frame_container, relief="flat", bd=0, bg='#ffffff')
+        opacity_frame.pack(fill=tk.X, pady=5)
 
-        tk.Label(opacity_frame, text="透明度:").pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(opacity_frame, text=" Transparency:", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(0, 5))
         self.opacity_var = tk.StringVar()
-        opacity_entry = tk.Entry(
-            opacity_frame, textvariable=self.opacity_var, width=10, relief="solid", bd=1)
+        opacity_entry = ttk.Entry(
+            opacity_frame, textvariable=self.opacity_var, width=10, style='Settings.TEntry')
         opacity_entry.pack(side=tk.LEFT, padx=(0, 5))
-        tk.Label(opacity_frame, text="%").pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(opacity_frame, text="%", bg='#ffffff', font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(0, 5))
 
         # 悬浮图标说明
-        tk.Label(scrollable_frame, text="悬浮图标大小: 50×50, 可自由拖动, 点击显示页面",
-                 font=("Arial", 9)).pack(anchor=tk.W, pady=(0, 10), padx=10)
+        tk.Label(system_frame, text="💡 悬浮图标大小: 50×50, 可自由拖动, 点击显示页面",
+                 bg='#ffffff', font=("Segoe UI", 9), fg='#777777').pack(anchor=tk.W, pady=(0, 15))
 
         # 数据管理
-        tk.Label(scrollable_frame, text="数据管理", font=("Arial", 12, "bold")).pack(
-            anchor=tk.W, pady=(15, 10), padx=5)
+        data_frame = tk.Frame(scrollable_frame, bg='#ffffff')
+        data_frame.pack(fill=tk.X, pady=5, padx=20)
+        ttk.Label(data_frame, text="🗑️ 数据管理", style='SettingsGroup.TLabel').pack(
+            anchor=tk.W, pady=(10, 0))
 
         # 重置所有记录
-        reset_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
-        reset_frame.pack(fill=tk.X, pady=5, padx=10)
+        reset_frame = tk.Frame(data_frame, relief="flat", bd=0, bg='#ffffff')
+        reset_frame.pack(fill=tk.X, pady=10)
 
-        tk.Label(reset_frame, text="此操作将删除所有记录和本地缓存文件!").pack(
+        tk.Label(reset_frame, text="⚠️ 此操作将删除所有记录和本地缓存文件!", bg='#ffffff', font=("Segoe UI", 10), fg='#e74c3c').pack(
             side=tk.LEFT, pady=5)
-        tk.Button(reset_frame, text="重置所有记录", command=self.reset_all_records).pack(
+        tk.Button(reset_frame, text="🔄 重置所有记录", command=self.reset_all_records, 
+                  bg='#e74c3c', fg='white', relief='flat', font=("Segoe UI", 10, 'bold'), cursor='hand2',
+                  bd=0, highlightthickness=0).pack(
             side=tk.RIGHT, pady=5)
 
         # 按钮框架
-        button_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
-        button_frame.pack(pady=20, padx=10)
+        button_frame = tk.Frame(scrollable_frame, relief="flat", bd=0, bg='#ffffff')
+        button_frame.pack(pady=30, padx=20)
 
-        tk.Button(button_frame, text="保存设置", command=self.save_settings).pack(
-            side=tk.LEFT, padx=(0, 10))
-        tk.Button(button_frame, text="恢复默认",
-                  command=self.reset_to_default_settings).pack(side=tk.LEFT)
+        tk.Button(button_frame, text="✅ 保存设置", command=self.save_settings,
+                  bg='#3498db', fg='white', relief='flat', font=("Segoe UI", 11, 'bold'), cursor='hand2',
+                  bd=0, highlightthickness=0, padx=20, pady=8).pack(
+            side=tk.LEFT, padx=(0, 15))
+        tk.Button(button_frame, text="🔄 恢复默认",
+                  command=self.reset_to_default_settings, 
+                  bg='#95a5a6', fg='white', relief='flat', font=("Segoe UI", 11, 'bold'), cursor='hand2',
+                  bd=0, highlightthickness=0, padx=20, pady=8).pack(side=tk.LEFT)
 
         # 初始化设置显示
         self.load_settings_display()
@@ -1531,12 +1585,18 @@ class ClipboardGUI:
             image = Image.open(image_path)
             image = image.resize((50, 50), Image.LANCZOS)  # 调整图片大小
 
-            # 移除了圆形遮罩,使用原始图片
+            # 创建圆角遮罩
+            mask = Image.new('L', (50, 50), 0)
+            draw = ImageDraw.Draw(mask)
+            draw.rounded_rectangle((0, 0, 50, 50), radius=10, fill=255)
+            
+            # 应用遮罩以创建圆角效果
+            image.putalpha(mask)
 
             photo = ImageTk.PhotoImage(image)
 
             # 创建标签显示图片
-            label = tk.Label(self.float_window, image=photo, bg="white")
+            label = tk.Label(self.float_window, image=photo, bg='#000000', bd=0)
             label.image = photo  # 保持引用防止被垃圾回收
             label.pack(fill=tk.BOTH, expand=True)
         except Exception as e:
@@ -1618,47 +1678,43 @@ class ClipboardGUI:
         # 创建悬浮面板 (200x400像素)
         self.float_panel = tk.Toplevel(self.float_window)
         self.float_panel.title("最近记录")
-        self.float_panel.geometry("200x400")
+        self.float_panel.geometry("240x440")
         self.float_panel.overrideredirect(True)  # 去除窗口边框
         self.float_panel.attributes("-topmost", True)  # 置顶显示
+        # 移除透明度设置，因为Tkinter的透明度支持有限
 
         # 设置面板样式
-        self.float_panel.configure(bg="white")
+        self.float_panel.configure(bg="#f0f0f0")
 
         # 确保面板在屏幕范围内,并根据需要居中显示
         if center_on_icon:
-            self.position_float_panel_above_icon(400)
+            self.position_float_panel_above_icon(440)
         else:
-            self.position_float_panel_within_screen(400)
+            self.position_float_panel_within_screen(440)
 
         # 创建带圆角的面板背景
-        self.create_rounded_panel_bg(self.float_panel, 200, 400, 8, "#ffffff")
-
-        # 创建主框架
-        main_frame = tk.Frame(self.float_panel, bg="white",
-                              relief="solid", bd=0)  # 移除边框
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=1,
-                        pady=1)  # 添加一点padding以显示圆角效果
+        # 简化背景创建过程
+        bg_frame = tk.Frame(self.float_panel, bg="#ffffff", relief='solid', bd=1)
+        bg_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
         # 创建标题栏
-        header_frame = tk.Frame(main_frame, bg="#f8f9fa", height=36)
+        header_frame = tk.Frame(bg_frame, bg="#3498db", height=40)
         header_frame.pack(fill=tk.X, side=tk.TOP)
         header_frame.pack_propagate(False)  # 固定高度
 
         # 标题文本
-        header_label = tk.Label(header_frame, text="最近记录", bg="#f8f9fa", fg="#2c3e50",
-                                font=("Arial", 10, "bold"))
+        header_label = tk.Label(header_frame, text="📋 最近记录", bg="#3498db", fg="white",
+                                font=("Segoe UI", 11, "bold"))
         header_label.pack(expand=True)
 
         # 创建内容区域
-        content_frame = tk.Frame(main_frame, bg="white")
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+        content_frame = tk.Frame(bg_frame, bg="#ffffff")
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
         # 创建Canvas和滚动条来显示记录
-        canvas = tk.Canvas(content_frame, bg="white", highlightthickness=0, height=350)
-        canvas.pack_propagate(False)  # 防止canvas自动扩展
+        canvas = tk.Canvas(content_frame, bg="#ffffff", highlightthickness=0)
         scrollbar = tk.Scrollbar(content_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg="white")
+        scrollable_frame = tk.Frame(canvas, bg="#ffffff")
         
         scrollable_frame.bind(
             "<Configure>",
@@ -1681,20 +1737,12 @@ class ClipboardGUI:
         canvas.bind("<MouseWheel>", _on_mousewheel)
         scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
         
-        # 为所有按钮添加鼠标滚轮支持
-        def _bind_mousewheel_to_buttons(frame):
-            for widget in frame.winfo_children():
-                widget.bind("<MouseWheel>", _on_mousewheel)
-                if isinstance(widget, tk.Frame):
-                    _bind_mousewheel_to_buttons(widget)
-        
         # 保存对滚动框架和canvas的引用
         self.scrollable_records_frame = scrollable_frame
         self.records_canvas = canvas
 
         # 存储记录信息用于双击处理
         self.float_panel_records = []
-        print(f"初始化float_panel_records数组")
 
         for i, record in enumerate(all_records):
             record_type, content, timestamp, record_id = record
@@ -1718,7 +1766,6 @@ class ClipboardGUI:
                 'content': content if record_type == "text" else content
             }
             self.float_panel_records.append(record_info)
-            print(f"添加记录到float_panel_records[{i}]: {record_info}")
             
             # 为每条记录创建一个按钮
             record_button = tk.Button(
@@ -1728,51 +1775,44 @@ class ClipboardGUI:
                 bd=0,
                 relief="flat",
                 fg="#333333",
-                bg="#f5f5f5",
+                bg="#f8f9fa",
                 activeforeground="#0066cc",
-                activebackground="#e8e8e8",
+                activebackground="#e8f4fc",
                 cursor="hand2",
                 anchor="w",
                 justify="left",
-                wraplength=180
+                wraplength=190,
+                font=("Segoe UI", 9)
             )
-            record_button.pack(fill="x", padx=5, pady=2)
+            record_button.pack(fill="x", padx=0, pady=2)
+            
+            # 添加悬停效果
+            def on_enter(e, btn=record_button):
+                btn.config(bg="#e0f0ff")
+                
+            def on_leave(e, btn=record_button):
+                btn.config(bg="#f8f9fa")
+                
+            record_button.bind("<Enter>", on_enter)
+            record_button.bind("<Leave>", on_leave)
             
             # 为按钮添加鼠标滚轮支持
             record_button.bind("<MouseWheel>", _on_mousewheel)
             
-            # 添加调试信息确认事件绑定
-            print(f"已为记录{i}创建按钮并绑定单击事件")
-            
             # 为按钮绑定双击事件
             record_button.bind("<Double-Button-1>", functools.partial(self._handle_float_panel_double_click, index=i))
-            
-            # 添加右键点击测试
-            record_button.bind("<Button-3>", functools.partial(self._test_click, index=i))
             
         # 更新Canvas的滚动区域
         self.scrollable_records_frame.update_idletasks()
         self.records_canvas.configure(scrollregion=self.records_canvas.bbox("all"))
         
-        # 绑定所有按钮的鼠标滚轮
-        _bind_mousewheel_to_buttons(self.scrollable_records_frame)
-
-        # 注意：不能将Text控件设置为DISABLED状态，否则会阻止标签事件响应
-        # self.records_text.config(state=tk.DISABLED)  # 禁止编辑
-
-        # 如果没有记录,显示提示信息
-        if not all_records:
-            # self.records_text.config(state=tk.NORMAL)
-            self.records_text.delete(1.0, tk.END)
-            self.records_text.insert(tk.END, "暂无剪贴板记录\n请复制一些文本或文件\n记录将显示在这里")
-            # self.records_text.config(state=tk.DISABLED)
         # 创建底部"查看更多记录"
-        footer_frame = tk.Frame(main_frame, bg="#f8f9fa", height=34)
+        footer_frame = tk.Frame(bg_frame, bg="#f0f0f0", height=40)
         footer_frame.pack(fill=tk.X, side=tk.BOTTOM)
         footer_frame.pack_propagate(False)
 
-        footer_label = tk.Label(footer_frame, text="查看更多记录", bg="#f8f9fa", fg="#5c6bc0",
-                                font=("Arial", 9), cursor="hand2")
+        footer_label = tk.Label(footer_frame, text="🔍 查看更多记录", bg="#f0f0f0", fg="#5c6bc0",
+                                font=("Segoe UI", 10), cursor="hand2")
         footer_label.pack(expand=True)
 
         # 绑定底部点击事件,显示主窗口

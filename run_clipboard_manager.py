@@ -6,14 +6,14 @@
 """
 
 import threading
-import tkinter as tk
+import sys
 from clipboard_manager_main import ClipboardManager, monitor_clipboard_loop
-from clipboard_gui import ClipboardGUI
+# 使用PySide6版本的GUI
+from clipboard_pyside_gui import main as gui_main
 import win32gui
 import win32con
 import win32api
 import win32event
-import sys
 
 def is_already_running():
     """检查程序是否已经运行"""
@@ -53,18 +53,12 @@ def main():
     monitor_thread.start()
     print("📋 剪贴板监控已在后台启动")
     
-    # 运行GUI应用（默认隐藏主窗口，显示系统托盘图标）
-    root = tk.Tk()
-    app = ClipboardGUI(root)
-    
-    # 默认隐藏主窗口，只显示系统托盘图标
-    root.withdraw()
-    app.is_hidden = True
-    
+    # 运行PySide6 GUI应用
     print("🖥️  剪贴板管理器已在系统托盘运行")
     print("点击系统托盘图标显示界面，或按 Alt+C")
     
-    root.mainloop()
+    # 直接调用PySide6 GUI主函数
+    gui_main()
     
     print("👋 应用已退出")
 
