@@ -49,7 +49,8 @@ class ClipboardGUI:
 
         # 设置窗口属性
         self.root.title("剪贴板历史记录")
-        self.root.geometry("710x460")
+        self.root.geometry("750x500")
+        self.root.minsize(700, 400)  # 设置最小尺寸
 
         # 设置窗口图标
         try:
@@ -60,7 +61,7 @@ class ClipboardGUI:
             print(f"设置窗口图标失败: {e}")
 
         # 居中显示窗口
-        self.center_window(710, 460)
+        self.center_window(750, 500)
         # 创建UI
         self.setup_ui()
         # 在UI创建完成后加载第一页记录
@@ -185,22 +186,25 @@ class ClipboardGUI:
 
     def setup_ui(self):
         """设置UI界面"""
+        # 设置样式
+        self.setup_styles()
+        
         # 创建主框架
-        main_frame = ttk.Frame(self.root)
+        main_frame = ttk.Frame(self.root, style='Main.TFrame')
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # 创建笔记本控件(标签页)
-        self.notebook = ttk.Notebook(main_frame)
+        self.notebook = ttk.Notebook(main_frame, style='Main.TNotebook')
         self.notebook.grid(row=0, column=0, columnspan=2,
                            sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # 记录标签页
-        self.records_frame = ttk.Frame(self.notebook)
+        self.records_frame = ttk.Frame(self.notebook, style='Tab.TFrame')
         self.notebook.add(self.records_frame, text="记录(L)")
         self.setup_records_tab()
 
         # 设置标签页
-        self.settings_frame = ttk.Frame(self.notebook)
+        self.settings_frame = ttk.Frame(self.notebook, style='Tab.TFrame')
         self.notebook.add(self.settings_frame, text="设置(S)")
         self.setup_settings_tab()
 
@@ -228,6 +232,98 @@ class ClipboardGUI:
 
         # 设置焦点以确保快捷键生效
         self.root.focus_set()
+
+    def setup_styles(self):
+        """设置界面样式"""
+        style = ttk.Style()
+        
+        # 配置整体主题
+        style.theme_use('clam')
+        
+        # 主框架样式
+        style.configure('Main.TFrame', background='#f0f0f0')
+        
+        # 笔记本控件样式
+        style.configure('Main.TNotebook', background='#f0f0f0', tabmargins=[0, 0, 0, 0])
+        style.configure('Main.TNotebook.Tab', 
+                        padding=[15, 5], 
+                        font=('Segoe UI', 10, 'bold'),
+                        background='#e0e0e0',
+                        foreground='#333333')
+        style.map('Main.TNotebook.Tab',
+                  background=[('selected', '#ffffff')],
+                  foreground=[('selected', '#000000')])
+        
+        # 标签页框架样式
+        style.configure('Tab.TFrame', background='#ffffff')
+        
+        # 搜索框样式
+        style.configure('Search.TEntry', 
+                        padding=5,
+                        fieldbackground='#ffffff',
+                        borderwidth=1)
+        
+        # 树状视图样式
+        style.configure('Records.Treeview',
+                        background='#ffffff',
+                        foreground='#333333',
+                        rowheight=25,
+                        fieldbackground='#ffffff',
+                        borderwidth=0)
+        style.configure('Records.Treeview.Heading',
+                        font=('Segoe UI', 9, 'bold'),
+                        background='#f5f5f5',
+                        foreground='#000000',
+                        padding=5)
+        style.map('Records.Treeview.Heading',
+                  background=[('active', '#e0e0e0')])
+        
+        # 滚动条样式
+        style.configure('Vertical.TScrollbar',
+                        gripcount=0,
+                        background='#e0e0e0',
+                        troughcolor='#f0f0f0',
+                        borderwidth=0)
+        style.map('Vertical.TScrollbar',
+                  background=[('active', '#d0d0d0'), ('pressed', '#c0c0c0')])
+        
+        # 状态标签样式
+        style.configure('Status.TLabel',
+                        background='#ffffff',
+                        foreground='#666666',
+                        font=('Segoe UI', 9),
+                        padding=[5, 5])
+        
+        # 设置页面标题样式
+        style.configure('SettingsTitle.TLabel',
+                        font=('Segoe UI', 14, 'bold'),
+                        foreground='#2c3e50',
+                        padding=[0, 10])
+        
+        # 设置页面组标题样式
+        style.configure('SettingsGroup.TLabel',
+                        font=('Segoe UI', 11, 'bold'),
+                        foreground='#3498db',
+                        padding=[0, 10])
+        
+        # 设置页面选项样式
+        style.configure('SettingsOption.TCheckbutton',
+                        background='#ffffff',
+                        foreground='#333333',
+                        font=('Segoe UI', 9))
+        style.configure('SettingsOption.TRadiobutton',
+                        background='#ffffff',
+                        foreground='#333333',
+                        font=('Segoe UI', 9))
+        style.configure('SettingsOption.TLabel',
+                        background='#ffffff',
+                        foreground='#333333',
+                        font=('Segoe UI', 9))
+        
+        # 设置页面输入框样式
+        style.configure('Settings.TEntry',
+                        padding=3,
+                        fieldbackground='#ffffff')
 
     def switch_to_records_tab(self, event=None):
         """切换到记录标签页"""
@@ -361,7 +457,7 @@ class ClipboardGUI:
 
         # 绑定鼠标滚轮事件，使整个画布区域都支持滚动
         def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            canvas.yview_scroll(int(-1*(event.delta/100)), "units")
 
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
@@ -423,6 +519,7 @@ class ClipboardGUI:
         # 自定义天数选项
         custom_frame = tk.Frame(scrollable_frame, relief="flat", bd=0)
         custom_frame.pack(fill=tk.X, pady=5, padx=10)
+
 
         custom_radio = tk.Radiobutton(
             custom_frame, text="自定义天数:", variable=self.retention_var, value="custom", bd=0, highlightthickness=0)
