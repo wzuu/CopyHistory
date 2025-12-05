@@ -7,6 +7,10 @@
 
 import threading
 import sys
+import os
+# 添加当前目录到Python路径
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from clipboard_manager_main import ClipboardManager, monitor_clipboard_loop
 # 使用PySide6版本的GUI
 from clipboard_pyside_gui import main as gui_main
